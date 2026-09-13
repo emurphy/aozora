@@ -21,7 +21,7 @@ export interface SpreadPage {
   idref?: string;
   // Loose index signature so callers can pass their own page shapes
   // (FixedLayoutPage, SpinePageSpread) without restructuring; `any` (not
-  // `unknown`) is required here — an `unknown` index makes the type a strict
+  // `unknown`) is required here: an `unknown` index makes the type a strict
   // supertype that those interfaces no longer structurally satisfy.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
@@ -76,7 +76,7 @@ export function buildSpreads(pages: SpreadPage[], ppd: "ltr" | "rtl"): Spread[] 
 
     // Close a pair: this page is the "after" side and the previous page is an
     // "before" side still sitting alone in the most recent spread. Both pages
-    // must be fixed-layout — a reflowable text page never pairs.
+    // must be fixed-layout: a reflowable text page never pairs.
     if (
       fixed(page) &&
       fixed(prev) &&

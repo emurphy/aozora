@@ -7,7 +7,7 @@ import { getKanaMorae, isMoraPitchHigh, getKanaDiacriticInfo } from "@/lib/dicti
  * reader's shadow root. High/low pattern from lib/dictionary/pitch.ts.
  *
  * Devoiced (無声化) morae get a dotted red ring; nasalised (鼻濁音) morae have
- * their dakuten stripped (が→か) and get a small red dot — matching how Yomitan's
+ * their dakuten stripped (が→か) and get a small red dot, matching how Yomitan's
  * pronunciation view annotates them.
  */
 

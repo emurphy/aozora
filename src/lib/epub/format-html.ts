@@ -44,7 +44,7 @@ export function buildReaderHtml(
     keyToUrl.set(key, url);
   }
 
-  // One pass for the dummy data-URIs, one for bare `aoz:<key>` refs — instead of
+  // One pass for the dummy data-URIs, one for bare `aoz:<key>` refs, instead of
   // two full-string replaceAll scans per blob (2×N passes over the whole HTML).
   // Keys are matched longest-first so an alternation never stops short on a key
   // that prefixes another (e.g. `1.jpg` vs `11.jpg`).

@@ -4,8 +4,8 @@ import { randomUUID } from "node:crypto";
 import { resolveCoverUrl } from "./discord-cover.js";
 
 /**
- * Discord Rich Presence, spoken directly over Discord's local IPC socket — no
- * third-party dependency. The protocol is tiny: connect to the running Discord
+ * Discord Rich Presence, spoken directly over Discord's local IPC socket, with
+ * no third-party dependency. The protocol is tiny: connect to the running Discord
  * client's named pipe, handshake with an application client id, then push
  * `SET_ACTIVITY` frames. Every message is an 8-byte header (opcode + payload
  * length, both int32 LE) followed by a UTF-8 JSON body.
@@ -13,7 +13,7 @@ import { resolveCoverUrl } from "./discord-cover.js";
  * The whole module is best-effort: if Discord isn't running the connection just
  * fails and we retry later; nothing here ever throws into the app.
  *
- * Set the app's Application ID below (or via AOZORA_DISCORD_CLIENT_ID) — created
+ * Set the app's Application ID below (or via AOZORA_DISCORD_CLIENT_ID), created
  * at https://discord.com/developers/applications. Upload an "Art Asset" named
  * `aozora` there for the large icon. Presence is a no-op until the id is set.
  */
@@ -23,7 +23,7 @@ const CLIENT_ID = process.env.AOZORA_DISCORD_CLIENT_ID ?? "1521878992423223326";
 const DOWNLOAD_BUTTON = { label: "Get Aozora青空", url: "https://github.com/meokisama/aozora/releases" };
 
 /**
- * A public https image URL can be used as `large_image` directly — the Discord
+ * A public https image URL can be used as `large_image` directly: the Discord
  * client fetches, proxies and caches it (no upload / external-assets call needed).
  * The catch: the client expands the URL into an internal `mp:external/{id}/...`
  * asset key that must stay ≤ 256 chars, so an over-long URL is silently dropped.
@@ -80,7 +80,7 @@ const MIN_SEND_INTERVAL = 4000;
 interface PresenceInput {
   bookTitle: string;
   author?: string | null;
-  chapterName?: string | null; // full title — shown in the cover's hover tooltip
+  chapterName?: string | null; // full title, shown in the cover's hover tooltip
   chapterIndex?: number; // 1-based position in the TOC
   chapterTotal?: number;
   progress?: number; // 0-100

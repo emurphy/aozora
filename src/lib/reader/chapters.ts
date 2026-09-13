@@ -1,7 +1,7 @@
 import type { Section } from "@/lib/epub/generate-html";
 
 /** Index of the last chapter that starts at or before `char` (chapters are in
- *  document order), or -1 if none — the shared basis for the active-chapter
+ *  document order), or -1 if none. The shared basis for the active-chapter
  *  indicator, Discord presence, bookmark names, and search-result labels. */
 export function chapterIndexAt(chapters: Section[], char: number): number {
   let idx = -1;

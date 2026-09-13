@@ -38,8 +38,8 @@ export function clampPan(state: ZoomState, w: number, h: number): ZoomState {
 }
 
 /**
- * Zooms to `nextScale` while keeping the point `(px, py)` — measured from the
- * content centre — pinned under the cursor. Derived from `px = t + s·c` (screen
+ * Zooms to `nextScale` while keeping the point `(px, py)` (measured from the
+ * content centre) pinned under the cursor. Derived from `px = t + s·c` (screen
  * offset of a content point) solved so the same `c` maps to the same `px` after the
  * scale change. Result is scale-clamped, then pan-clamped to `w×h`.
  */

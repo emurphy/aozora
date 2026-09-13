@@ -27,7 +27,7 @@ export function BookEditDialog({ book, open, onOpenChange }: { book: Book; open:
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Reset the form each time the dialog opens — the instance is reused across edits.
+  // Reset the form each time the dialog opens: the instance is reused across edits.
   useEffect(() => {
     if (open) {
       setTitle(book.title);

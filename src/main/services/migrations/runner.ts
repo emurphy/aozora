@@ -8,7 +8,7 @@ import type Database from "better-sqlite3";
  * to apply on top of any earlier version (guard column adds, etc.).
  *
  * Now that Aozora ships to users we can no longer wipe userData on a schema
- * change — migrations upgrade an existing on-disk DB in place instead. Baseline
+ * change: migrations upgrade an existing on-disk DB in place instead. Baseline
  * tables are still created by each DB's own `CREATE TABLE IF NOT EXISTS` schema;
  * migrations only carry it forward from there.
  */

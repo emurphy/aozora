@@ -8,7 +8,7 @@
  *
  * Web Audio rather than an <audio> element because of clock skew: a media
  * element's `currentTime` runs ahead of the sound leaving the speakers
- * (device/Bluetooth latency, easily 100–300 ms) — enough to light the first
+ * (device/Bluetooth latency, easily 100–300 ms), enough to light the first
  * karaoke characters before the voice is heard. The AudioContext clock plus its
  * `outputLatency` tracks the sample currently reaching the listener.
  */
@@ -35,7 +35,7 @@ export function stopVoicevox(): void {
     try {
       source.stop();
     } catch {
-      // never started — nothing to stop
+      // never started, nothing to stop
     }
     source = null;
   }
@@ -75,7 +75,7 @@ export async function speakVoicevox(text: string, { server, styleId, params, onP
   const gen = generation;
   const res = await window.electronAPI.voicevox.synthesize(server, trimmed, styleId, params);
   // A newer utterance started (and called stopVoicevox) while we were awaiting
-  // synthesis — abandon this one rather than play over it.
+  // synthesis, so abandon this one rather than play over it.
   if (gen !== generation) return null;
   if (!res.ok) return res.error;
 
@@ -84,7 +84,7 @@ export async function speakVoicevox(text: string, { server, styleId, params, onP
   try {
     if (ac.state === "suspended") await ac.resume();
   } catch {
-    // resume rejected — start() below still schedules; audio begins when it can
+    // resume rejected; start() below still schedules, audio begins when it can
   }
   let buffer: AudioBuffer;
   try {
@@ -104,7 +104,7 @@ export async function speakVoicevox(text: string, { server, styleId, params, onP
 
   const { timings } = res;
   // Time of the sample the listener is hearing right now: the context clock
-  // minus the device's output latency (read per frame — it can settle after the
+  // minus the device's output latency (read per frame, since it can settle after the
   // stream opens). Negative while the first samples are still in transit, which
   // charsSpoken treats as "nothing spoken yet".
   const heard = () => ac.currentTime - startAt - (ac.outputLatency || ac.baseLatency || 0);

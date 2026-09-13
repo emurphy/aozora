@@ -16,7 +16,7 @@ import type { BackupManifest, BackupPrefs, BackupResult, RestoreResult } from "@
  *   manifest.json          format + provenance; validated before anything is touched
  *   prefs.json             renderer localStorage (aozora-* keys only)
  *   aozora.db              VACUUM INTO snapshot, WAL folded in
- *   books/<id>/cover.*     always — the library looks broken without covers
+ *   books/<id>/cover.*     always; the library looks broken without covers
  *   books/<id>/book.epub   only when "include book files" is on
  *
  * Excludes the dictionary DB (large, re-importable) and imported fonts. Stored
@@ -94,7 +94,7 @@ async function writeArchive(target: string, dbSnapshot: string, includeBooks: bo
 /* ── Restore ────────────────────────────────────────────────────────────── */
 
 /**
- * Unpacks into `staging`. Entry names are checked to resolve inside it — a
+ * Unpacks into `staging`. Entry names are checked to resolve inside it: a
  * hand-made archive could otherwise carry `../` names and write anywhere.
  */
 async function extractArchive(archivePath: string, staging: string): Promise<void> {
@@ -193,7 +193,7 @@ export const registerBackupIpc = (): void => {
       fs.rmSync(`${live}-shm`, { force: true });
 
       // An older backup can lack columns this build reads, and this DB has no
-      // migration path — put the user's own data back rather than leave them a
+      // migration path, so put the user's own data back rather than leave them a
       // library that throws on every query.
       const schemaError = libraryStore.schemaError();
       if (schemaError) {
@@ -201,7 +201,7 @@ export const registerBackupIpc = (): void => {
         if (fs.existsSync(rollback)) fs.copyFileSync(rollback, live);
         return {
           ok: false,
-          error: `this backup was made by Aozora ${manifest.appVersion} and can't be read by ${app.getVersion()} — ${schemaError}`,
+          error: `this backup was made by Aozora ${manifest.appVersion} and can't be read by ${app.getVersion()}: ${schemaError}`,
         };
       }
 

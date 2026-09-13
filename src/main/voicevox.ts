@@ -10,7 +10,7 @@ import type {
 
 /**
  * VOICEVOX Engine IPC. Like the AnkiConnect client (src/main/anki.ts), the
- * renderer owns the config and the main process is a stateless HTTP client —
+ * renderer owns the config and the main process is a stateless HTTP client:
  * Node fetch has no browser Origin, so it sidesteps the CORS the engine would
  * otherwise enforce on a page request.
  *
@@ -28,7 +28,7 @@ const errMsg = (err: unknown): string => (err instanceof Error ? err.message : S
 
 /**
  * Applies the reader's tuning to a fresh AudioQuery. `pauseLengthScale` is only
- * set when the engine's query already exposes it — older engines reject unknown
+ * set when the engine's query already exposes it: older engines reject unknown
  * fields on /synthesis, and the field's presence signals support.
  */
 function applyParams(query: Record<string, unknown>, params: VoicevoxParams): void {
@@ -90,7 +90,7 @@ export const registerVoicevoxIpc = (): void => {
             samples: (si.voice_samples ?? []).map((s) => `data:audio/wav;base64,${s}`),
           }));
         } catch {
-          // /speaker_info failed — keep the bare styles from /speakers.
+          // /speaker_info failed, so keep the bare styles from /speakers.
         }
         return { speakerUuid: sp.speaker_uuid, name: sp.name, styles };
       }),
@@ -103,7 +103,7 @@ export const registerVoicevoxIpc = (): void => {
     try {
       await request(`${trimSlash(server)}/initialize_speaker?speaker=${styleId}&skip_reinitialize=true`, { method: "POST" });
     } catch {
-      // ignore — synthesis will just pay the load cost on first use
+      // ignore: synthesis will just pay the load cost on first use
     }
   });
 

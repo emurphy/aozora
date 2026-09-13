@@ -34,7 +34,7 @@ export interface Bookmark {
 
 /**
  * A highlighted (and optionally annotated) span of a book. Anchored by the same
- * character-offset model as reading position/bookmarks — `startChar`/`endChar`
+ * character-offset model as reading position/bookmarks: `startChar`/`endChar`
  * survive re-flow and mode switches, so the wash is re-painted from them (via the
  * CSS Custom Highlight API) rather than stored as fragile DOM ranges. `color` is
  * one of the reader's palette keys (see `lib/reader/annotations`); `snippet` is
@@ -229,7 +229,7 @@ export interface GlossStyle {
 /**
  * One structured-content element node (a small subset of HTML expressed as JSON).
  * Mirrors Yomitan's `structured-content.Element` plus the `{type:"text"|
- * "structured-content"|"image"}` glossary wrappers — see references/yomitan.
+ * "structured-content"|"image"}` glossary wrappers (see references/yomitan).
  */
 export interface GlossElement {
   /** HTML-ish tag for a structured-content element (div, span, ul, li, ruby, …). */
@@ -366,7 +366,7 @@ export interface DictionaryImportProgress {
   title?: string;
   termsInserted?: number;
   inserted?: number; // rows written so far across all banks (for a progress bar)
-  total?: number; // total rows to write — or total bytes to download (downloading phase)
+  total?: number; // total rows to write, or total bytes to download (downloading phase)
   received?: number; // bytes downloaded so far (downloading phase)
   message?: string;
 }
@@ -374,7 +374,7 @@ export interface DictionaryImportProgress {
 // ─── Anki (AnkiConnect) ──────────────────────────────────────────────────────
 // Flashcard mining to Anki via the AnkiConnect add-on. Config lives in the
 // renderer (persisted like reader prefs); the main process is a stateless
-// AnkiConnect HTTP client — a Node fetch has no browser Origin, so unlike a
+// AnkiConnect HTTP client: a Node fetch has no browser Origin, so unlike a
 // browser extension we sidestep AnkiConnect's CORS/origin whitelist entirely.
 
 /** How to handle a card whose first field already exists in the collection. */
@@ -442,15 +442,15 @@ export type AnkiAddResult = { ok: true; noteId: number } | { ok: false; error: s
  * `pauseLength` is only applied when the engine's query exposes it (newer engines).
  */
 export interface VoicevoxParams {
-  /** speedScale — playback speed. */
+  /** speedScale: playback speed. */
   rate: number;
-  /** pitchScale — voice pitch (0 = neutral). */
+  /** pitchScale: voice pitch (0 = neutral). */
   pitch: number;
-  /** intonationScale — pitch-range / expressiveness (0 = flat). */
+  /** intonationScale: pitch-range / expressiveness (0 = flat). */
   intonation: number;
-  /** volumeScale — loudness. */
+  /** volumeScale: loudness. */
   volume: number;
-  /** pauseLengthScale — length of pauses at punctuation. */
+  /** pauseLengthScale: length of pauses at punctuation. */
   pauseLength: number;
 }
 

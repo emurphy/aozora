@@ -79,7 +79,7 @@ describe("buildSpreads", () => {
     expect(spreads.map(ids)).toEqual([["t1"], ["i1"], ["i2"]]);
   });
 
-  it("only pairs fixed-layout pages — reflowable text never pairs", () => {
+  it("only pairs fixed-layout pages: reflowable text never pairs", () => {
     // A mixed book: a pre-paginated right page followed by a reflowable text
     // page that happens to carry page-spread-left. They must NOT pair.
     const list = [
@@ -115,7 +115,7 @@ describe("buildSpreads", () => {
 });
 
 describe("buildSpreads from a parsed fixed-layout spine", () => {
-  // Cover (center), then right/left pairs — the canonical RTL manga sequence.
+  // Cover (center), then right/left pairs: the canonical RTL manga sequence.
   const OPF = `<?xml version="1.0"?>
   <package version="3.0">
     <manifest>

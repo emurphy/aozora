@@ -18,7 +18,7 @@ const MARGIN = 8; // min gap from the viewport edge
 /**
  * The unobtrusive first step of highlighting: a button that surfaces at the end of
  * a fresh selection. Clicking it opens the colour/note editor; ignoring it (reading
- * on, clicking away, Escape) leaves the text untouched — so highlighting stays
+ * on, clicking away, Escape) leaves the text untouched, so highlighting stays
  * always-on without a full popup covering what you read.
  */
 export function AnnotationTrigger({ point, onPick, onClose }: Props) {

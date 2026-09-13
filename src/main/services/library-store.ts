@@ -6,7 +6,7 @@ import type { Book, Bookmark, Annotation, ProgressUpdate, StatsOverview, DailyAc
 
 /**
  * SQLite-backed library store: source of truth for book metadata and reading
- * progress. Parsed EPUB content is NOT stored here — it lives in the renderer's
+ * progress. Parsed EPUB content is NOT stored here: it lives in the renderer's
  * IndexedDB cache, re-derivable from the original file.
  *
  * On-disk layout (under Electron userData):
@@ -274,7 +274,7 @@ export const libraryStore = {
 
   /**
    * Reports a missing column this build reads, or null. Restores need it: unlike
-   * the dictionary DB, this one has no migration runner — the schema block heals
+   * the dictionary DB, this one has no migration runner: the schema block heals
    * a missing *table* but never a missing *column*.
    */
   schemaError(): string | null {

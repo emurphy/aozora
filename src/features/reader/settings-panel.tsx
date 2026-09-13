@@ -54,7 +54,7 @@ interface SmoothSliderProps {
 }
 
 /** A slider that drags smoothly against local state and commits to the store only
- *  when the drag ends — so live re-layout/re-flow fires once on release instead of
+ *  when the drag ends, so live re-layout/re-flow fires once on release instead of
  *  on every pixel. The value readout tracks the drag live. */
 function SmoothSlider({ label, value, min, max, step, onCommit, format }: SmoothSliderProps) {
   const [local, setLocal] = useState(value);

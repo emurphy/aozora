@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 
 /**
  * Second line behind `lib/epub/sanitize.ts`: markup that slips through still
- * can't reach the network — no remote script, no `@import`, no tracking pixel.
+ * can't reach the network: no remote script, no `@import`, no tracking pixel.
  *
  * `file:` rides along with `'self'` because the packaged app loads over `file://`,
  * where `'self'` doesn't reliably match an opaque origin. `'unsafe-inline'` is for

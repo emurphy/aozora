@@ -51,7 +51,7 @@ export function GoalCard({ dailyGoal, setDailyGoal, todayChars, goalPct, goalStr
       </div>
       <Card size="sm" className="flex-1 justify-center">
         <div className="flex items-center gap-5 px-3 py-1">
-          <GoalRing pct={goalPct} label={dailyGoal > 0 ? `${Math.round(goalPct * 100)}%` : "—"} sub={dailyGoal > 0 ? "today" : "off"} />
+          <GoalRing pct={goalPct} label={dailyGoal > 0 ? `${Math.round(goalPct * 100)}%` : "-"} sub={dailyGoal > 0 ? "today" : "off"} />
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center gap-2">
               <Target className="size-3.5 text-muted-foreground" />

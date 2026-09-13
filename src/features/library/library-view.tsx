@@ -38,13 +38,13 @@ const SHELF_W: Record<CardSize, string> = {
 /**
  * Normalizes a string for search matching: NFKC-folds half/full-width forms
  * (so 半角ｶﾅ ↔ 全角カナ and ＡＢＣ ↔ ABC match) and strips ALL whitespace,
- * including the full-width ideographic space U+3000 — JS `\s` covers it.
+ * including the full-width ideographic space U+3000, which JS `\s` covers.
  */
 function normalizeSearch(str: string | null | undefined) {
   return (str ?? "").normalize("NFKC").replace(/\s+/g, "").toLowerCase();
 }
 
-/** Pure sort over a copy — never returned straight from a Zustand selector. */
+/** Pure sort over a copy, never returned straight from a Zustand selector. */
 function sortBooks(list: Book[], sort: SortKey) {
   const arr = [...list];
   switch (sort) {

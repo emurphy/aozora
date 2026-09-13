@@ -3,7 +3,7 @@ import type { DictionaryImportProgress } from "@/lib/types";
 
 /**
  * Live state of an in-flight dictionary import. In a store (not the view's local
- * state) so it survives navigating away — the work runs in the main process and
+ * state) so it survives navigating away: the work runs in the main process and
  * any view can reflect "importing + %". Ephemeral, not persisted.
  *
  * `importing` is bracketed by begin()/finish(); progress events only refine the

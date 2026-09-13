@@ -31,7 +31,7 @@ const createWindow = () => {
     },
   });
 
-  // A link in a book must never replace the running app with a web page — that
+  // A link in a book must never replace the running app with a web page: that
   // page would inherit the privileged `electronAPI`. The reader intercepts its
   // own clicks; this backstops the paths that don't (fixed-layout view).
   // Same-URL is let through so Vite's HMR full-reload still works.

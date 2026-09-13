@@ -5,7 +5,7 @@ import { downstepNumber, pitchAccentSvg } from "@/lib/dictionary/pitch";
 
 /**
  * Builds Anki notes from a dictionary lookup + the user's `{marker}` field
- * templates (Yomitan's convention — see references/yomitan/ext/js/data/
+ * templates (Yomitan's convention; see references/yomitan/ext/js/data/
  * anki-template-util.js). The renderer resolves every marker except
  * `{screenshot}`: the window capture happens in the main process, so that marker
  * expands to a sentinel the main process later swaps for the stored `<img>` tag.

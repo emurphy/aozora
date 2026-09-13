@@ -111,7 +111,7 @@ export function useReadingSession(bookId?: string | null) {
       }
       if (s.mode === "paginated" && pos !== s.currentPos) {
         // Flip: credit the page just left, gated on how long it was dwelled on
-        // (active time only — idle/hidden never reached activeMs).
+        // (active time only: idle/hidden never reached activeMs).
         s.pacc = advancePaginated(s.pacc, pos, s.activeMs - s.pageEnteredActiveMs);
         s.pageEnteredActiveMs = s.activeMs;
       }
@@ -163,7 +163,7 @@ export function useReadingSession(bookId?: string | null) {
   }, []);
 
   // Flush when the book changes or the reader unmounts (the closing session
-  // belongs to the previous book — its id is captured in the ref at begin).
+  // belongs to the previous book, whose id is captured in the ref at begin).
   useEffect(() => flush, [bookId, flush]);
 
   // Flush on window close so app exit doesn't lose the open session.

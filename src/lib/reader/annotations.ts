@@ -1,8 +1,8 @@
 /**
  * User highlights (and notes), painted via the CSS Custom Highlight API.
  *
- * Anchored by the reader's character-offset model — the same `getParagraphNodes` +
- * `getCharacterCount` walk as reading position, bookmarks and search — so a
+ * Anchored by the reader's character-offset model (the same `getParagraphNodes` +
+ * `getCharacterCount` walk as reading position, bookmarks and search), so a
  * `[startChar, endChar)` span survives re-flow, font changes and
  * continuous↔paginated switches. Nothing is stored as a DOM range; ranges are
  * rebuilt from the offsets against the live shadow tree on every re-render, then
@@ -63,14 +63,14 @@ export function charOffsetAt(root: Element, node: Node, offset: number, baseChar
   let cum = 0;
   for (const n of nodes) {
     // If the boundary point falls before this node begins, it sits in a gap
-    // (element edge, skipped whitespace) — snap to this node's start.
+    // (element edge, skipped whitespace): snap to this node's start.
     try {
       const at = document.createRange();
       at.setStart(n, 0);
       at.collapse(true);
       if (at.comparePoint(node, offset) <= 0) return baseChar + cum;
     } catch {
-      /* comparePoint can throw for a detached/foreign node — fall through */
+      /* comparePoint can throw for a detached/foreign node: fall through */
     }
     if (n === node && n.nodeType === Node.TEXT_NODE) {
       return baseChar + cum + countJapanese((n.textContent || "").slice(0, offset));

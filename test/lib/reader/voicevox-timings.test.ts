@@ -48,7 +48,7 @@ describe("buildCharTimings", () => {
   });
 
   it("still pins kana when pauses don't match the text's commas", () => {
-    // Engine produced no pause for the comma — one clause, counting still exact.
+    // Engine produced no pause for the comma: one clause, counting still exact.
     const t = buildCharTimings(query([{ moras: 4 }]), "かき、くけ", 1, 1);
     expect(t.chars.map((c) => c.toFixed(1))).toEqual(["0.2", "0.3", "0.3", "0.4", "0.5"]);
   });

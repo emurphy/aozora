@@ -101,7 +101,7 @@ describe("generateHtml (image-in-spine / OMF)", () => {
   });
 });
 
-describe("generateHtml (flat numeric filenames — substring collision)", () => {
+describe("generateHtml (flat numeric filenames, substring collision)", () => {
   // Calibre/hako books name images by bare numbers at the root, so "1.jpg" is a
   // substring of "11.jpg"/"21.jpg" and "10.jpg" of "110.jpg". A global string
   // replace nested the dummies into broken URLs; per-element matching must not.

@@ -1,7 +1,7 @@
 /*
  * Lookup text variants for the hover dictionary. Yomitan runs the scanned text
  * through a set of "text processors" and tries each variant, so a word written
- * in katakana still matches a hiragana dictionary reading (and vice versa) — see
+ * in katakana still matches a hiragana dictionary reading (and vice versa). See
  * references/yomitan/ext/js/language/ja/japanese-text-preprocessors.js.
  *
  * We keep ONLY length-preserving folds (katakana↔hiragana). The lookup reports
@@ -30,7 +30,7 @@ export function convertHiraganaToKatakana(text: string): string {
 /**
  * Distinct source-text variants to try for a lookup, the original first. Only
  * length-preserving kana folds are applied (katakana↔hiragana), so a variant's
- * character positions still line up with the original text one-for-one — the
+ * character positions still line up with the original text one-for-one: the
  * matched length a variant yields is valid for highlighting the original run.
  */
 export function lookupVariants(text: string): string[] {

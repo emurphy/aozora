@@ -25,7 +25,7 @@ export const libraryApi = {
     return filePath;
   },
 
-  /** Raw bytes (Uint8Array) of a file path — for metadata extraction. */
+  /** Raw bytes (Uint8Array) of a file path, for metadata extraction. */
   readFile: (filePath: string) => ipcRenderer.invoke("library:read-file", filePath),
 
   /** Copies an .epub into the library and persists metadata + cover. */
@@ -34,28 +34,24 @@ export const libraryApi = {
   /** All books, newest first, each with a coverDataUrl. */
   list: () => ipcRenderer.invoke("library:list"),
 
-  /** Updates a book's editable metadata. */
   updateBook: (payload: UpdateBookPayload) => ipcRenderer.invoke("library:update-book", payload),
 
   /** Removes a book and its files. */
   remove: (id: string) => ipcRenderer.invoke("library:remove", id),
 
-  /** Raw bytes (Uint8Array) of an imported book — for the reader. */
+  /** Raw bytes (Uint8Array) of an imported book, for the reader. */
   readBook: (id: string) => ipcRenderer.invoke("library:read-book", id),
 
-  /** Persists reading progress fields for a book. */
   saveProgress: (id: string, progress: ProgressUpdate) => ipcRenderer.invoke("library:save-progress", id, progress),
 
-  /** Marks a book as favorite (true) or not (false). Returns the updated record. */
+  /** Returns the updated record. */
   setFavorite: (id: string, favorite: boolean) => ipcRenderer.invoke("library:set-favorite", id, favorite),
 
   /** All bookmarks for a book, ordered by reading position. */
   listBookmarks: (bookId: string) => ipcRenderer.invoke("library:list-bookmarks", bookId),
 
-  /** Adds a bookmark at a reading position. */
   addBookmark: (payload: AddBookmarkPayload) => ipcRenderer.invoke("library:add-bookmark", payload),
 
-  /** Removes a bookmark by id. */
   removeBookmark: (id: string) => ipcRenderer.invoke("library:remove-bookmark", id),
 
   /** All highlights/annotations for a book, ordered by reading position. */
@@ -64,9 +60,7 @@ export const libraryApi = {
   /** Adds a highlight (optionally with a note) over a character span. */
   addAnnotation: (payload: AddAnnotationPayload) => ipcRenderer.invoke("library:add-annotation", payload),
 
-  /** Updates an annotation's colour and/or note. */
   updateAnnotation: (payload: UpdateAnnotationPayload) => ipcRenderer.invoke("library:update-annotation", payload),
 
-  /** Removes an annotation by id. */
   removeAnnotation: (id: string) => ipcRenderer.invoke("library:remove-annotation", id),
 };

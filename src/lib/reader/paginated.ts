@@ -4,8 +4,8 @@
  * Exactly one spine section (`aoz-<idref>` wrapper) is rendered at a time into a
  * multi-column container, so each chapter starts on a fresh page:
  *   - vertical-rl (tategaki): `column-width = viewport height`, `width: 100%`,
- *     `height: auto` — paged via `scrollTop` (stride = viewport height + gap).
- *   - horizontal-tb: `column-width = viewport width`, fixed `height` — paged via
+ *     `height: auto`, paged via `scrollTop` (stride = viewport height + gap).
+ *   - horizontal-tb: `column-width = viewport width`, fixed `height`, paged via
  *     `scrollLeft` (stride = width + gap); trailing partial page pulled in with
  *     `translateX`.
  *

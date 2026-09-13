@@ -31,7 +31,7 @@ import type {
 /**
  * The `window.electronAPI` surface exposed by the preload layer and the
  * renderer's only contract with the main process. Keep in lockstep with
- * `src/preload/*`.
+ * `src/preload/*`, which documents what each call does.
  */
 export interface WindowApi {
   minimize(): void;
@@ -41,9 +41,7 @@ export interface WindowApi {
   toggleFullscreen(): void;
   isFullscreen(): Promise<boolean>;
   openExternal(url: string): Promise<void>;
-  /** Subscribe to maximize-state changes; returns an unsubscribe function. */
   onMaximizedChanged(callback: (maximized: boolean) => void): () => void;
-  /** Subscribe to fullscreen-state changes; returns an unsubscribe function. */
   onFullscreenChanged(callback: (fullscreen: boolean) => void): () => void;
 }
 
@@ -86,20 +84,14 @@ export interface DictionaryApi {
 }
 
 export interface SystemApi {
-  /** Wipes all persisted data and relaunches the app. Never resolves. */
   clearAllData(): Promise<void>;
-  /** Writes a backup archive to a user-picked path. */
   exportBackup(includeBooks: boolean, prefs: BackupPrefs): Promise<BackupResult>;
-  /** Restores a user-picked archive; the caller writes the returned prefs back. */
   importBackup(): Promise<RestoreResult>;
-  /** Restarts the app. Never resolves. */
   relaunch(): Promise<void>;
 }
 
 export interface DiscordApi {
-  /** Turn Discord Rich Presence on/off. */
   setEnabled(enabled: boolean): void;
-  /** Report the currently-open book so Discord shows it. */
   update(presence: {
     bookTitle: string;
     author?: string | null;
@@ -109,7 +101,6 @@ export interface DiscordApi {
     progress?: number;
     coverBookId?: string | null;
   }): void;
-  /** Clear the presence (no book open) while staying connected. */
   clear(): void;
 }
 

@@ -2,8 +2,8 @@
 //
 // PaginatedController's rendering (setSection, _measure, flipPage) depends on
 // real multi-column layout + scroll geometry that jsdom does not compute, so it
-// needs a browser-level harness. Covered here: the layout-independent pieces —
-// the per-section character accounting derived in the constructor, the derived
+// needs a browser-level harness. Covered here: the layout-independent pieces,
+// i.e. the per-section character accounting derived in the constructor, the derived
 // getters, and the page<->character mapping.
 import { describe, it, expect, vi } from "vitest";
 import { PaginatedController, PAGE_GAP } from "@/lib/reader/paginated";

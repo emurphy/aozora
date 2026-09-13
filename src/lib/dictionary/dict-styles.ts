@@ -1,6 +1,6 @@
 /**
  * Injects each imported dictionary's custom `styles.css`, `@scope`d to that
- * dictionary's `data-aoz-dict` marker so it only styles that dict's glosses —
+ * dictionary's `data-aoz-dict` marker so it only styles that dict's glosses,
  * never the rest of the app.
  *
  * Yomitan dictionaries (e.g. Jitendex) carry no inline styling; their layout

@@ -47,7 +47,7 @@ export function continuousStyles(vertical: boolean) {
     }
     /* Vertical-rl only: give the structural wrappers a definite height so
        full-page images size against the viewport instead of collapsing to zero.
-       In horizontal-tb the wrappers must stay auto-height — pinning them to one
+       In horizontal-tb the wrappers must stay auto-height: pinning them to one
        viewport makes each chapter overflow and overlap the next. */
     ${
       vertical
@@ -185,7 +185,7 @@ export function fixedLayoutStyles() {
       -webkit-user-drag: none;
     }
     /* The strip scroller lives in this shadow root, so index.css's global
-       scrollbar styling can't reach it — mirror it here. */
+       scrollbar styling can't reach it, so mirror it here. */
     .aoz-fxl-stage::-webkit-scrollbar { width: 3px; height: 3px; }
     .aoz-fxl-stage::-webkit-scrollbar-track { background: transparent; }
     .aoz-fxl-stage::-webkit-scrollbar-thumb { background: #a0a0a0; border-radius: 5px; }
@@ -207,7 +207,7 @@ export function imageRules(scope: string, padV = "5rem", padH = "6rem", vertical
   const maxW = `calc(var(--reader-w, 100vw) - ${padH})`;
   const maxH = `calc(var(--reader-h, 100vh) - ${padV})`;
   // Centre in-flow illustrations: inline by default, so margin:auto can't, and
-  // block lets the inline-axis auto margins do it. Horizontal-tb only — the axis
+  // block lets the inline-axis auto margins do it. Horizontal-tb only, since the axis
   // flips in vertical-rl (where they're already fine). Gaiji stay inline.
   const inflowCentering = vertical
     ? ""
@@ -221,8 +221,8 @@ export function imageRules(scope: string, padV = "5rem", padH = "6rem", vertical
     ${scope} svg { -webkit-user-drag: none; }
 
     /* Centre image-only pages on both axes via flex. margin:auto can't (inline
-       SVG, and vertical-rl block flow starts at the right edge — why these once
-       sat flush right); flex centres regardless of writing mode. */
+       SVG, and vertical-rl block flow starts at the right edge, which is why
+       these once sat flush right); flex centres regardless of writing mode. */
     ${scope} .aoz-no-text {
       display: flex;
       align-items: center;
@@ -258,7 +258,7 @@ export function imageRules(scope: string, padV = "5rem", padH = "6rem", vertical
  */
 export function spreadRules(scope: string) {
   // Each half: capped to half the reader width and full height. SVG height is a
-  // definite value — `div.main` between wrapper and SVG has no size, so a
+  // definite value: `div.main` between wrapper and SVG has no size, so a
   // `height: 100%` chain would collapse (the "blank illustration" bug).
   const maxH = `calc(var(--reader-h, 100vh) - 6rem)`;
   const halfW = `calc((var(--reader-w, 100vw) - 8rem) / 2)`;
@@ -315,7 +315,7 @@ export function spreadRules(scope: string) {
 export function furiganaRules(scope: string) {
   return `
     /* Keep readings out of text selection (and thus copy/lookup) regardless of
-       furigana mode — selecting a base word otherwise drags in its kana. */
+       furigana mode: selecting a base word otherwise drags in its kana. */
     ${scope} rt {
       user-select: none;
       -webkit-user-select: none;
@@ -349,7 +349,7 @@ export function furiganaRules(scope: string) {
 }
 
 // A highlight Range runs from its start node to its end node in document order,
-// so it sweeps across any furigana <rt> sitting between base-text nodes — and the
+// so it sweeps across any furigana <rt> sitting between base-text nodes, and the
 // CSS Custom Highlight API ignores `user-select: none`. Re-scoping the pseudo to
 // `rt` (higher specificity than bare `::highlight()`) clears the wash off the
 // reading so only the base text is painted.

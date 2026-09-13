@@ -2,7 +2,7 @@ import type { BackupPrefs } from "@/lib/types";
 
 /**
  * Reader settings, library/stats prefs, Anki and TTS config live in localStorage
- * (Zustand persist), which only the renderer can reach — so the backup IPC is
+ * (Zustand persist), which only the renderer can reach, so the backup IPC is
  * handed the data rather than reading it itself.
  */
 
@@ -21,7 +21,7 @@ export function dumpPrefs(): BackupPrefs {
 }
 
 /**
- * Replaces the persisted prefs with a backup's — existing keys are dropped first
+ * Replaces the persisted prefs with a backup's: existing keys are dropped first
  * so nothing outside the backup survives. The stores have already read
  * localStorage by now, hence the caller's relaunch.
  */

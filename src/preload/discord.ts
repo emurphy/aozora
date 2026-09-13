@@ -3,7 +3,7 @@ import { ipcRenderer } from "electron";
 export interface DiscordPresence {
   bookTitle: string;
   author?: string | null;
-  chapterName?: string | null; // full title — shown in the cover's hover tooltip
+  chapterName?: string | null; // full title, shown in the cover's hover tooltip
   chapterIndex?: number; // 1-based position in the TOC
   chapterTotal?: number;
   progress?: number; // 0-100

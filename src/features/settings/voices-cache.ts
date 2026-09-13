@@ -3,8 +3,8 @@ import type { VoicevoxSpeakerDetail } from "@/lib/types";
 /**
  * Session cache for the VOICEVOX voice catalogue (icons + sample clips as data
  * URIs). Loading it hits /speaker_info for every speaker, so we keep the result
- * per server URL and reuse it across the settings card and the picker dialog —
- * a Refresh forces a re-fetch when the engine's voices change. Not persisted to
+ * per server URL and reuse it across the settings card and the picker dialog.
+ * A Refresh forces a re-fetch when the engine's voices change. Not persisted to
  * disk (the data URIs are large and cheap to re-fetch next session).
  */
 const cache = new Map<string, VoicevoxSpeakerDetail[]>();

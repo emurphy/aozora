@@ -2,7 +2,7 @@ import { nativeImage } from "electron";
 
 /**
  * Downscales an image buffer to `width` (aspect preserved) as a JPEG. Returns
- * null when the image is already narrower, empty, or undecodable (SVG, corrupt) —
+ * null when the image is already narrower, empty, or undecodable (SVG, corrupt);
  * callers decide whether to keep the original bytes.
  */
 export function resizeCover(buf: Buffer, width: number, quality: number): Buffer | null {

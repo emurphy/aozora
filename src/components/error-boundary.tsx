@@ -17,8 +17,8 @@ interface State {
 
 /**
  * Catches render/lifecycle crashes so one malformed book can't blank the window.
- * React unmounts everything below the nearest boundary on a throw — without one,
- * that's the entire app.
+ * React unmounts everything below the nearest boundary on a throw, and without
+ * one that's the entire app.
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };

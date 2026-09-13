@@ -79,7 +79,7 @@ export function getMetaContentByName(contents: OpfContents, name: string): strin
  * Rendition layout: "pre-paginated" for fixed-layout books (manga/comics/
  * image-per-page), else "reflowable". EPUB3 declares this via
  * `<meta property="rendition:layout">`. Open Manga Format (OMF) books don't set
- * it — they declare `<meta property="omf:version">` and reference images from the
+ * it: they declare `<meta property="omf:version">` and reference images from the
  * spine; matching bibi, we treat `omf:version` as pre-paginated.
  */
 export function getRenditionLayout(contents: OpfContents): string {
@@ -94,7 +94,7 @@ export function isFixedLayout(contents: OpfContents): boolean {
 }
 
 /**
- * Book-level `rendition:spread` — whether fixed-layout pages may show side by
+ * Book-level `rendition:spread`: whether fixed-layout pages may show side by
  * side. `none` never pairs; `both` always pairs; `landscape`/`portrait` pair only
  * in that window orientation. Matching bibi, an absent or `auto` value normalises
  * to `landscape` (the spec default). Consumed by the fixed-layout viewer's "auto"

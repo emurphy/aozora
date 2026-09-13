@@ -45,7 +45,7 @@ async function invoke<T>(endpoint: AnkiEndpoint, action: string, params: Record<
     try {
       res = await send();
     } catch {
-      // AnkiConnect unreachable — Anki not running, add-on missing, or wrong URL.
+      // AnkiConnect unreachable: Anki not running, add-on missing, or wrong URL.
       throw new Error("Could not reach Anki. Make sure Anki is running with the AnkiConnect add-on installed.");
     }
   }

@@ -172,7 +172,7 @@ function renderNode(node: GlossContent | undefined, key: Key, dictId: string): R
 
   // Many Yomitan dicts emit `<table>` with `<tr>` children directly. The browser
   // adds an implicit <tbody>, but React warns on the invalid nesting, so wrap the
-  // rows ourselves — unless the table already carries a thead/tbody/tfoot.
+  // rows ourselves, unless the table already carries a thead/tbody/tfoot.
   if (tag === "table" && !containsTableSection(el.content)) {
     return createElement("table", props, createElement("tbody", null, children));
   }

@@ -435,14 +435,14 @@ export function ReaderView() {
   }, [book]);
 
   // --- Render: (re)build the shadow content for the current mode. ------------
-  // Runs when parsed content becomes ready and whenever the reading mode toggles
-  // — never re-parsing, only re-laying-out, carrying the character position.
+  // Runs when parsed content becomes ready and whenever the reading mode toggles,
+  // never re-parsing, only re-laying-out, carrying the character position.
   useEffect(() => {
     const parsed = parsedRef.current;
     if (!parsed) return;
 
     // Fixed-layout renders through <FixedLayoutView>, which owns its own shadow
-    // DOM and navigation. Nothing to build here — just mark it ready.
+    // DOM and navigation. Nothing to build here, just mark it ready.
     if (parsed.fixedLayout) {
       modeRef.current = "fixed";
       readyRef.current = true;
@@ -570,7 +570,7 @@ export function ReaderView() {
   useEffect(() => {
     if (fixedLayout || readingMode !== "paginated") return;
     const onKey = (e: KeyboardEvent) => {
-      if (panelOpenRef.current) return; // a panel/gallery is open — don't flip pages behind it
+      if (panelOpenRef.current) return; // a panel/gallery is open, don't flip pages behind it
       if (e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
       const vert = verticalRef.current;
       switch (e.code) {

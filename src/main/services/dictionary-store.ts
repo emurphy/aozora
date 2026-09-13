@@ -75,7 +75,7 @@ function runRemoveWorker(dictId: string): Promise<void> {
 }
 
 /**
- * Store + lookup engine for imported Yomitan dictionaries — the public API the
+ * Store + lookup engine for imported Yomitan dictionaries: the public API the
  * IPC layer calls (import, list, lookup, media). Schema lives in
  * dictionary-db.ts, parsing in dictionary-parse.ts.
  */
@@ -276,7 +276,7 @@ function queryKanji(database: Database.Database, chars: string[], tagMaps: TagMa
 export const dictionaryStore = {
   listDicts(): DictionaryInfo[] {
     // Counts are cached columns (written at import, backfilled by migrate-1), so
-    // this no longer scans the entry tables — the freeze that COUNT(*) caused.
+    // listing never scans the entry tables: a COUNT(*) there freezes the UI.
     const rows = getDb()
       .prepare(`SELECT * FROM dictionaries ORDER BY priority ASC, imported_at ASC`)
       .all() as DictRow[];

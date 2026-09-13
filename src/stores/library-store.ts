@@ -145,7 +145,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   /**
    * Marks a book finished/unread. Status is derived from `progress`, so this
    * just writes progress (1 = finished, 0 = unread) plus the matching char
-   * offset through the normal save-progress path — no extra schema or IPC.
+   * offset through the normal save-progress path: no extra schema or IPC.
    */
   setFinished: async (id, finished) => {
     const book = get().books.find((b) => b.id === id);

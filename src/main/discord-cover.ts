@@ -7,11 +7,11 @@ import { resizeCover } from "./cover-image.js";
 
 /**
  * Turns a local book cover into a public https URL for Discord Rich Presence's
- * large image (the client only accepts an asset key or a reachable URL — a local
- * path / data: URL won't do). Covers are uploaded anonymously to catbox.moe,
+ * large image (the client only accepts an asset key or a reachable URL, never a
+ * local path / data: URL). Covers are uploaded anonymously to catbox.moe,
  * which returns a permanent direct link; no account or credentials involved.
  *
- * Opt-in only, gated in the renderer — uploading a cover discloses what the user
+ * Opt-in only, gated in the renderer: uploading a cover discloses what the user
  * is reading to a third-party host (and, once fetched, Discord's CDN). We reuse
  * the app's already-downscaled cover as-is.
  *
@@ -20,7 +20,7 @@ import { resizeCover } from "./cover-image.js";
  */
 
 /**
- * Downscale covers to ~this width ourselves before upload — letting Discord's
+ * Downscale covers to ~this width ourselves before upload: letting Discord's
  * client shrink the stored 300px cover pixelates it. Bumping it re-resolves
  * stored URLs automatically (width is part of the cache key).
  */
@@ -64,7 +64,7 @@ const uploadToCatbox = async (buf: Buffer, filename: string): Promise<string | n
     const url = (await res.text()).trim();
     return url.startsWith("https://") ? url : null;
   } catch {
-    return null; // offline / catbox down — presence just falls back to the bundled asset
+    return null; // offline / catbox down; presence falls back to the bundled asset
   }
 };
 

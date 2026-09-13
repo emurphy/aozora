@@ -316,7 +316,7 @@ export function DictionariesView() {
               </DndContext>
             )}
             {dicts.length > 1 && (
-              <p className="text-[11px] text-muted-foreground/70">Drag to reorder — dictionaries higher in the list are consulted first.</p>
+              <p className="text-[11px] text-muted-foreground/70">Drag to reorder: dictionaries higher in the list are consulted first.</p>
             )}
 
             <div className="flex items-start gap-2.5 border bg-muted/30 p-3">
@@ -334,7 +334,7 @@ export function DictionariesView() {
             </div>
           </section>
 
-          {/* Recommended dictionaries — one-click download + import. */}
+          {/* Recommended dictionaries: one-click download + import. */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Recommended</h2>
             <ul className="divide-y border">

@@ -27,7 +27,7 @@ function isInlineGlyphImage(img: Element): boolean {
     const parent = el.parentElement;
     if (parent.tagName === "RUBY" || parent.tagName === "RB") return true;
     if (hasTextSibling(el)) return true;
-    if (!INLINE_WRAPPERS.has(parent.tagName)) break; // reached a block — stop climbing
+    if (!INLINE_WRAPPERS.has(parent.tagName)) break; // reached a block, stop climbing
     el = parent;
   }
   return false;

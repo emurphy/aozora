@@ -102,7 +102,7 @@ export function generateHtml(data: Record<string, string | Blob>, contents: OpfC
   const result = document.createElement("div");
 
   let mainChapters: Section[] = [];
-  // The blob key set is invariant across spine items — build it once, not per item.
+  // The blob key set is invariant across spine items, so build it once, not per item.
   const blobKeys = new Set(blobLocations);
 
   // Table of contents → main chapters
@@ -179,7 +179,7 @@ export function generateHtml(data: Record<string, string | Blob>, contents: OpfC
     if (imageHref) {
       // Synthesize a body holding just the image. The dummy placeholder carries
       // the manifest href (also the blob key), so buildReaderHtml swaps it for an
-      // object URL at render time — same path as embedded images.
+      // object URL at render time, the same path as embedded images.
       htmlHref = imageHref; // let TOC / href resolution match the image item
       innerHtml = `<img class="aoz-spine-item-image" alt="" src="${buildDummyImage(imageHref)}" />`;
     } else {
@@ -230,7 +230,7 @@ export function generateHtml(data: Record<string, string | Blob>, contents: OpfC
               const decoded = decodeURIComponent(resolved);
               if (blobKeys.has(decoded)) key = decoded;
             } catch {
-              /* malformed escape — leave unresolved */
+              /* malformed escape: leave unresolved */
             }
           }
           elm.setAttribute(attr, key ? buildDummyImage(key) : resolved);
@@ -303,7 +303,7 @@ export function generateHtml(data: Record<string, string | Blob>, contents: OpfC
 
   clearAllBadImageRef(result);
   fixXHtmlHref(result);
-  // Before flattenAnchorHref, which leaves protocol URLs alone — `javascript:` included.
+  // Before flattenAnchorHref, which leaves protocol URLs alone, `javascript:` included.
   const stripped = stripScripting(result);
   if (stripped) console.warn(`Stripped ${stripped} script/handler(s) from book content`);
   flattenAnchorHref(result, hrefToWrapperId);

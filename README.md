@@ -40,7 +40,7 @@
 - **Illustration gallery**: browse every image in the book in a full-screen viewer, and
   click an image to jump straight to its position in the text and keep reading.
 - **Reading statistics**: automatically tracks your reading time and compiles it into a
-  visual dashboard — a GitHub-style heatmap, reading streaks, a daily goal, milestones, and
+  visual dashboard: a GitHub-style heatmap, reading streaks, a daily goal, milestones, and
   per-book totals.
 - **Full-screen reading**: a distraction-free mode, one click from the toolbar or the
   **F11** key.
@@ -63,7 +63,7 @@ matching entry pops up right next to it.
 
 - To use it, open the **Dictionaries** page (sidebar) and click **Import** to add
   dictionaries. It supports `.zip` files in Yomitan/Yomichan **format v3** such as JMdict,
-  Jitendex, and so on. Note that Aozora ships no bundled dictionary data — you bring your
+  Jitendex, and so on. Note that Aozora ships no bundled dictionary data: you bring your
   own, or install one of the recommended dictionaries offered right there in the app.
 - On the **Dictionaries** page you can toggle the whole lookup feature, change the trigger
   key, enable/disable each dictionary individually, and drag to **reorder** them to set

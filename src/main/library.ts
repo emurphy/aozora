@@ -194,7 +194,7 @@ export const registerLibraryIpc = (): void => {
 
   // Returns the bare book (no cover data URL): these fire on scroll / page-flip
   // (save-progress) and on a toggle (set-favorite), and the renderer discards the
-  // result — re-reading + base64-encoding the cover here would be wasted I/O.
+  // result, so re-reading + base64-encoding the cover here would be wasted I/O.
   ipcMain.handle("library:save-progress", (_event, id: string, progress: ProgressUpdate) => libraryStore.updateProgress(id, progress));
 
   ipcMain.handle("library:set-favorite", (_event, id: string, favorite: boolean) => libraryStore.setFavorite(id, favorite));

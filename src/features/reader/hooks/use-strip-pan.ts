@@ -1,6 +1,6 @@
 import { useMemo, type RefObject } from "react";
 
-/** Pointer travel (px) before a press becomes a drag — below this it stays a
+/** Pointer travel (px) before a press becomes a drag; below this it stays a
  *  click, so a stray mousedown doesn't nudge the strip (and clicks stay free for
  *  future UI toggles). */
 const DRAG_THRESHOLD = 5;
@@ -13,11 +13,11 @@ export interface StripPanHandle {
 
 /**
  * Grab-hand panning for the continuous fixed-layout strip. The strip is a native
- * scroller, so a pan just writes scrollLeft/scrollTop — the viewer's own scroll
+ * scroller, so a pan just writes scrollLeft/scrollTop and the viewer's own scroll
  * listener then re-mounts the visible window and reports the page under the centre
  * for free. Works for both axes (the non-scrollable one is a no-op) and for RTL
  * (scrollLeft is the physical offset regardless of layout order). No React
- * re-render — everything runs through the DOM node. Paginated zoom-pan is a
+ * re-render: everything runs through the DOM node. Paginated zoom-pan is a
  * separate concern (see useFxlZoom).
  */
 export function useStripPan(stageRef: RefObject<Element | null>): StripPanHandle {

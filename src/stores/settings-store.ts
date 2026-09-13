@@ -45,7 +45,7 @@ export const FONT_FAMILIES: { value: BuiltinFont; label: string }[] = [
  */
 export const THEMES: Record<ThemeName, { bg: string; color: string; dark: boolean }> = {
   sepia: { bg: "#faf8f4", color: "#1f1d1a", dark: false },
-  // Warm charcoal page with dimmed off-white text — matches the app's dark
+  // Warm charcoal page with dimmed off-white text: matches the app's dark
   // surface (index.css `.dark`) and avoids the glare of pure black/white.
   dark: { bg: "#201f1c", color: "#cac4b8", dark: true },
 };
@@ -90,7 +90,7 @@ export const FURIGANA_MODES: { value: FuriganaMode; label: string }[] = [
 
 /**
  * Page layout for fixed-layout books (manga); reflowable novels ignore it.
- *   - auto:   follow the book's OPF rendition:spread — none→single, both→spread,
+ *   - auto:   follow the book's OPF rendition:spread, mapping none→single, both→spread,
  *             landscape/portrait→spread only in that window orientation (absent
  *             defaults to landscape, i.e. spread in landscape, one page otherwise)
  *   - single: always one page (overrides the book)
@@ -124,7 +124,7 @@ export const MANGA_SCROLL_DIRECTIONS: { value: MangaScrollDirection; label: stri
 ];
 
 /**
- * User-selectable text directions. The default is `"auto"` — follow each EPUB's
+ * User-selectable text directions. The default is `"auto"`: follow each EPUB's
  * own PPD / CSS (tategaki for most LNs, horizontal for foreign books). Picking
  * `horizontal`/`vertical` writes an explicit global override that applies to
  * every book until switched back to `auto`.

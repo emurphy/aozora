@@ -1,7 +1,7 @@
 /**
  * Storage + registration for user-imported reader fonts. Font files can be
  * several MB (CJK), so the bytes live in IndexedDB (not the localStorage-backed
- * settings store) and are registered as document-level FontFaces on load — which
+ * settings store) and are registered as document-level FontFaces on load, which
  * makes them resolve inside the reader's shadow DOM, same as `@font-face`.
  */
 

@@ -56,7 +56,7 @@ describe("stripScripting", () => {
 
   // The URL parser drops tabs and newlines before resolving the scheme, so these
   // all execute in a browser despite not reading as `javascript:`. (A NUL byte is
-  // not in that set — the HTML parser turns it into U+FFFD, which breaks the
+  // not in that set: the HTML parser turns it into U+FFFD, which breaks the
   // scheme outright, so it needs no help from us.)
   it("sees through whitespace inside a URL", () => {
     const tab = String.fromCharCode(9);

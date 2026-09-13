@@ -40,7 +40,7 @@
 ## Từ điển
 
 Một **từ điển tra nhanh hỗ trợ từ điển Yomitan** tích hợp sẵn cho phép bạn đọc với việc tra cứu
-tức thì — không cần ứng dụng ngoài, không cần sao chép-dán. Di chuột lên một từ trong trình đọc
+tức thì: không cần ứng dụng ngoài, không cần sao chép-dán. Di chuột lên một từ trong trình đọc
 và mục từ tương ứng sẽ bật lên ngay bên cạnh.
 
 - Để sử dụng, vào mục **Dictionaries** trên thanh bên và chọn **Import** để thêm từ điển. Công cụ hỗ trợ các tệp `.zip` theo chuẩn v3 của Yomitan/Yomichan như: JMdict, Jitendex,... Lưu ý rằng ứng dụng không có sẵn dữ liệu từ điển, bạn cần tự tải và thêm từ điển của mình vào hoặc cài các từ điển được recommend sẵn trong đó.
@@ -51,11 +51,11 @@ và mục từ tương ứng sẽ bật lên ngay bên cạnh.
 Mỗi từ hiển thị đầy đủ mọi thông tin từ bộ từ điển của bạn, trình bày chuẩn theo giao diện của Yomitan:
 
 - Phần tiêu đề từ có gắn furigana, phiên âm đặt ngay trên chữ Hán theo dạng <ruby>, được phân bổ chính xác theo từng chữ Hán (ví dụ: 食べる → 食[た]べる).
-- Bảng giải nghĩa giữ nguyên cấu trúc gốc từ dữ liệu từ điển — bao gồm số thứ tự, danh sách, bảng biểu, phiên âm và cả hình ảnh đính kèm (như sơ đồ nét chữ, đồ thị trọng âm).
+- Bảng giải nghĩa giữ nguyên cấu trúc gốc từ dữ liệu từ điển, bao gồm số thứ tự, danh sách, bảng biểu, phiên âm và cả hình ảnh đính kèm (như sơ đồ nét chữ, đồ thị trọng âm).
 - Các nhãn tần suất, đồ thị trọng âm (kiểu OJAD kèm số hạ giọng) và nhãn từ loại / độ phổ biến đều được tô màu rõ ràng theo từng danh mục.
 - Bạn cũng có thể xem phân tích chi tiết Kanji (âm On/Kun, ý nghĩa, số nét, cấp độ JLPT/lớp học, tần suất) hoặc di chuột vào từng chữ Hán đơn lẻ để tra nhanh.
 
-Thay vì dùng bộ tách từ (tokenizer), Aozora sử dụng cơ chế quét từ tương tự Rikai/Yomitan. Bắt đầu từ vị trí con trỏ, ứng dụng sẽ thử từng cụm từ dài nhất có thể, sau đó thu ngắn dần và đưa qua hệ thống xử lý biến dạng từ — tích hợp sẵn khoảng 140 quy tắc ngữ pháp tiếng Nhật của Yomitan. Hệ thống này giúp khôi phục các từ đã chia về dạng nguyên mẫu rồi mới tìm trong từ điển. Một từ chỉ được coi là khớp khi đúng cả dạng ngữ pháp lẫn từ loại (ví dụ: danh từ sẽ không bao giờ bị nhầm với động từ đã chia). Cụm từ dài nhất tìm thấy kết quả sẽ được ưu tiên hiển thị và làm nổi bật. Các từ đã chia (như 食べさせられた) sẽ được đưa về dạng nguyên mẫu (食べる) kèm theo giải thích chi tiết các bước chia từ ngay trong bảng tra cứu.
+Thay vì dùng bộ tách từ (tokenizer), Aozora sử dụng cơ chế quét từ tương tự Rikai/Yomitan. Bắt đầu từ vị trí con trỏ, ứng dụng sẽ thử từng cụm từ dài nhất có thể, sau đó thu ngắn dần và đưa qua hệ thống xử lý biến dạng từ, tích hợp sẵn khoảng 140 quy tắc ngữ pháp tiếng Nhật của Yomitan. Hệ thống này giúp khôi phục các từ đã chia về dạng nguyên mẫu rồi mới tìm trong từ điển. Một từ chỉ được coi là khớp khi đúng cả dạng ngữ pháp lẫn từ loại (ví dụ: danh từ sẽ không bao giờ bị nhầm với động từ đã chia). Cụm từ dài nhất tìm thấy kết quả sẽ được ưu tiên hiển thị và làm nổi bật. Các từ đã chia (như 食べさせられた) sẽ được đưa về dạng nguyên mẫu (食べる) kèm theo giải thích chi tiết các bước chia từ ngay trong bảng tra cứu.
 
 ## Anki
 

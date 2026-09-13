@@ -14,7 +14,7 @@ export interface PopupRect {
  * Places a floating popup against an anchor box (a DOMRect in viewport
  * coordinates): below the anchor by default, flipping above when there isn't
  * room, then clamping to the viewport on both axes. Measures after layout, so
- * the popup must render at its natural size first — callers render it off-screen
+ * the popup must render at its natural size first: callers render it off-screen
  * and hidden until this returns a position.
  *
  * `contentKey` re-runs the measurement when the popup's content (hence size)

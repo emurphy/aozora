@@ -4,7 +4,7 @@ import { TagBadges } from "./dictionary-tags";
 /**
  * One kanji's breakdown in the popup: character, on'yomi / kun'yomi, meanings,
  * and a few high-signal stats. The many dictionary index codes in kanji_bank
- * `stats` are intentionally not shown — only SHOWN_STATS below.
+ * `stats` are intentionally not shown: only SHOWN_STATS below.
  */
 
 // Stat keys worth surfacing, in display order, with their labels.

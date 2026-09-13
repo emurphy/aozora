@@ -72,7 +72,7 @@ export function BackupSettings() {
       if (result.missingBooks) {
         // Rows are kept: they carry progress and highlights worth more than the tidiness.
         toast.warning(`${result.missingBooks} book file(s) were not in the backup`, {
-          description: "Their progress and highlights are restored — re-import the files to open them.",
+          description: "Their progress and highlights are restored; re-import the files to open them.",
         });
       }
       // Give the toast a beat to be seen before the window goes away.

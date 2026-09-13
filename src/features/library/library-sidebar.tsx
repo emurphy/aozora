@@ -66,7 +66,7 @@ export function LibrarySidebar() {
 
   const inLibrary = view === "library";
 
-  // Status counts for the nav labels. useMemo — never returned straight from a store selector.
+  // Status counts for the nav labels. useMemo: never returned straight from a store selector.
   const counts = useMemo(() => {
     const c = { all: books.length, favorites: 0, reading: 0, finished: 0, unread: 0 };
     for (const b of books) {
@@ -128,7 +128,7 @@ export function LibrarySidebar() {
                 count={a.count}
                 active={inLibrary && authorFilter === a.name}
                 onClick={() => {
-                  // Picking an author shows all their works — clear the status
+                  // Picking an author shows all their works, so clear the status
                   // filter so it isn't applied on top.
                   setView("library");
                   setStatusFilter("all");

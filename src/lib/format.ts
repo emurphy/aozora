@@ -6,7 +6,7 @@ export type ReadingStatus = "unread" | "reading" | "finished";
 
 /**
  * Derives a reading status from a book's progress. There is no separate status
- * column — `progress` (0..1) is the single source of truth: 0 = untouched,
+ * column. `progress` (0..1) is the single source of truth: 0 = untouched,
  * (near-)1 = read through, anything between = in progress.
  */
 export function readingStatus(book: { progress?: number } | null | undefined): ReadingStatus {

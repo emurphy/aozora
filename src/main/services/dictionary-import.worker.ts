@@ -9,7 +9,7 @@ import { insertParsedDict } from "./dictionary-insert.js";
 /**
  * Dictionary write utility process: runs the heavy, blocking dictionary writes
  * (import and remove) off the main process, so they never freeze the UI. Forked
- * by dictionary-store.ts with [dbPath, command, arg] in argv — command is
+ * by dictionary-store.ts with [dbPath, command, arg] in argv, where command is
  * "import" (arg = ZIP path) or "remove" (arg = dictionary id). Opens its own
  * connection to the same WAL file (concurrent reads from the main connection
  * stay live). Streams progress and the result back over `process.parentPort`.
@@ -60,7 +60,7 @@ async function runImport(dbPath: string, filePath: string): Promise<void> {
 }
 
 // Removing a dictionary cascades a DELETE across every entry table (millions of
-// indexed rows for a big dict) — done here so the synchronous delete never
+// indexed rows for a big dict), done here so the synchronous delete never
 // blocks the main-process event loop.
 function runRemove(dbPath: string, dictId: string): void {
   let database: Database.Database | undefined;
@@ -87,7 +87,7 @@ async function run(): Promise<void> {
   if (command === "remove") runRemove(dbPath, arg);
   else await runImport(dbPath, arg);
   // The process stays alive (parentPort keeps the loop open) until the parent
-  // kills it on done/removed/error — guaranteeing the final message flushes first.
+  // kills it on done/removed/error, guaranteeing the final message flushes first.
 }
 
 void run();

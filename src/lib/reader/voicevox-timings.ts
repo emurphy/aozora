@@ -26,7 +26,7 @@ interface AccentPhrase {
   pause_mora?: Mora | null;
 }
 
-// Small kana never carry their own mora — they merge into the preceding kana
+// Small kana never carry their own mora: they merge into the preceding kana
 // (きゃ is one mora). っ/ッ do carry one and are deliberately absent here.
 const SMALL_KANA = "ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ";
 // Characters the engine pauses at, used to anchor clause boundaries.
@@ -69,8 +69,8 @@ export function buildCharTimings(query: Record<string, unknown>, text: string, s
   const total = t + Number(query.postPhonemeLength ?? 0) / s;
 
   // Seconds at which `c` (a possibly fractional mora count) has been spoken.
-  // Integer counts land exactly on a mora's end — before any pause that follows
-  // it — which is what lets the highlight hold still through the pause. Snap
+  // Integer counts land exactly on a mora's end, before any pause that follows
+  // it, which is what lets the highlight hold still through the pause. Snap
   // near-integers first: float accumulation drift (e.g. 3.0000000000000004)
   // would otherwise tip a boundary char into the next mora, past the pause.
   const timeAt = (c: number): number => {
@@ -97,7 +97,7 @@ export function buildCharTimings(query: Record<string, unknown>, text: string, s
     let perOpaque = opaque > 0 ? (budget - kana) / opaque : 0;
     if (perOpaque < 0 || (opaque === 0 && kana !== budget)) {
       // Counting failed (the engine merged or split differently than we
-      // guessed) — fall back to an even spread over the voiced characters.
+      // guessed), so fall back to an even spread over the voiced characters.
       const voiced = kana + opaque;
       perKana = perOpaque = voiced > 0 ? budget / voiced : 0;
     }

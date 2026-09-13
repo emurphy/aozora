@@ -2,7 +2,7 @@
  * Curated Yomitan dictionaries offered for one-click install. "Install"
  * downloads the ZIP in the main process and feeds it through the normal import
  * pipeline; the installed row is stamped with this entry's `id` (source_id) so
- * the list shows Install vs. Installed exactly — no title guessing.
+ * the list shows Install vs. Installed exactly, with no title guessing.
  */
 export interface RecommendedDictionary {
   /** Stable catalog id: stamped onto the installed dictionary (source_id) and used for install-progress targeting. */
@@ -24,7 +24,7 @@ export const RECOMMENDED_DICTIONARIES: RecommendedDictionary[] = [
   {
     id: "jmnedict",
     title: "JMnedict",
-    description: "Proper names — people, places, organizations and works.",
+    description: "Proper names: people, places, organizations and works.",
     url: "https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMnedict.zip",
   },
   {

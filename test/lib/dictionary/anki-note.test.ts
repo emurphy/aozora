@@ -160,7 +160,7 @@ describe("buildNote", () => {
   });
 });
 
-describe("term markers — tags / part-of-speech / dictionary / pitch graph", () => {
+describe("term markers: tags / part-of-speech / dictionary / pitch graph", () => {
   const withTags = entry({
     byDict: [
       {

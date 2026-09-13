@@ -7,10 +7,10 @@ import { closeDb as closeDictionaryDb } from "./services/dictionary-db.js";
 /**
  * App-level maintenance IPC. `clear-all-data` is the in-app counterpart to a
  * clean uninstall: Squirrel.Windows leaves userData behind on removal, so this
- * wipes every persisted store — library DB + imported originals/covers, the
- * dictionary DB, and the renderer's IndexedDB caches (parsed EPUBs, imported
- * fonts) + localStorage (settings/library prefs) — then relaunches into a
- * first-run state. Every store re-creates its file lazily on next boot.
+ * wipes every persisted store, then relaunches into a first-run state: library
+ * DB + imported originals/covers, the dictionary DB, and the renderer's
+ * IndexedDB caches (parsed EPUBs, imported fonts) + localStorage
+ * (settings/library prefs). Every store re-creates its file lazily on next boot.
  */
 export const registerSystemIpc = (): void => {
   ipcMain.handle("system:clear-all-data", async () => {

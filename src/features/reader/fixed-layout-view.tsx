@@ -94,8 +94,8 @@ interface StripItem {
 /**
  * Fixed-layout (manga / comic) viewer with its own shadow root. Two navigation
  * modes (mangaReadingMode): "paginated" flips one spread (1–2 pages) at a time,
- * scaling each to fit; "continuous" lays every page in one scrollable strip —
- * vertical (fit to width) or a horizontal filmstrip (fit to height). The reported
+ * scaling each to fit; "continuous" lays every page in one scrollable strip,
+ * either vertical (fit to width) or a horizontal filmstrip (fit to height). The reported
  * position is a page ordinal, layout-independent, so it survives switching
  * modes/spreads. Imperative API via ref (see FixedLayoutHandle).
  */
@@ -168,7 +168,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
         return vp;
       }
       // Size still unknown (image not loaded yet): guess by stage orientation so the
-      // pre-load box isn't wildly mis-shaped. Not cached — the onload measurement
+      // pre-load box isn't wildly mis-shaped. Not cached: the onload measurement
       // replaces it on the next layout.
       const stage = stageRef.current;
       const landscape = !!stage && stage.clientWidth > stage.clientHeight;
@@ -184,7 +184,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
       return;
     }
     const views = viewsRef.current;
-    if (!views.length) return; // not laid out yet — don't report a bogus position
+    if (!views.length) return; // not laid out yet, so don't report a bogus position
     const view = views[viewIndexRef.current];
     const first = view?.items[0]?.ordinal ?? 0;
     ordinalRef.current = first;
@@ -195,7 +195,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
   // clone), shared by the spread and strip paths so both render pages identically.
   // `remeasure` re-lays-out once the bitmap's true size loads (spread mode, where a
   // wrong pre-load aspect misfits the page); `lazy` defers off-screen decode (strip
-  // mode, which sizes every box up front and stays static — see layoutStrip).
+  // mode, which sizes every box up front and stays static; see layoutStrip).
   const buildPageBox = useCallback(
     (page: SpreadPage, vp: Viewport, scale: number, opts: { remeasure?: boolean; lazy?: boolean } = {}): HTMLElement => {
       const { remeasure = true, lazy = false } = opts;
@@ -243,7 +243,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
 
   // Warm the bitmaps of the views on either side of `vi` so the next/previous flip
   // paints instantly (paginated mode). Runs at idle, dedups by URL, and lets the
-  // browser cache/decode do the work — no DOM is added.
+  // browser cache/decode do the work: no DOM is added.
   const prefetchNeighbors = useCallback((views: Spread[], vi: number) => {
     whenIdle(() => {
       for (const view of [views[vi + 1], views[vi - 1]]) {
@@ -348,7 +348,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
 
   // Strip virtualization: keep only the pages within the viewport (± one screen of
   // overscan) mounted, positioned absolutely at their precomputed offsets. Called
-  // on build and on every (rAF-throttled) scroll — a cheap set-diff that bounds the
+  // on build and on every (rAF-throttled) scroll: a cheap set-diff that bounds the
   // live DOM to the window regardless of page count.
   const updateStripWindow = useCallback(() => {
     const stage = stageRef.current;
@@ -384,10 +384,10 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
 
   // Continuous long-strip: compute every page's position along the scroll axis up
   // front (a static layout scroll ↔ page maps cheaply onto), but mount only the
-  // pages in view — see updateStripWindow. A vertical column fits to width, a
+  // pages in view (see updateStripWindow). A vertical column fits to width, a
   // horizontal filmstrip to height; horizontal honours progression (RTL lays pages
   // last→first so page 0 sits at the right). Boxes are absolutely positioned, so the
-  // container just needs its total extent — no per-page DOM until it scrolls in.
+  // container just needs its total extent: no per-page DOM until it scrolls in.
   const layoutStrip = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -580,7 +580,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
 
   // Resize: re-render (auto spread may flip single↔double; the strip re-fits page
   // widths). The observer's initial callback also covers the case where the stage
-  // had no size at mount — it lays out and reports the real starting position then.
+  // had no size at mount: it lays out and reports the real starting position then.
   // rAF-coalesced so a resize drag rebuilds the spread once per frame, not per entry.
   useEffect(() => {
     const host = hostRef.current;
@@ -642,12 +642,12 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
     return () => window.removeEventListener("keydown", onKey);
   }, [ppd, flip]);
 
-  // Wheel handling (native listener so Ctrl+wheel zoom can preventDefault — Electron
+  // Wheel handling (native listener so Ctrl+wheel zoom can preventDefault; Electron
   // would otherwise page-zoom). Paginated: zoom/pan takes the wheel first (Ctrl/⌘ or
   // pinch → zoom at cursor; plain wheel pans when zoomed), otherwise it flips
   // (debounced). Continuous: the vertical strip scrolls natively; the horizontal
-  // filmstrip maps the vertical wheel onto its axis (wheel-down advances — leftward
-  // in RTL) since most wheels/trackpads only emit deltaY.
+  // filmstrip maps the vertical wheel onto its axis (wheel-down advances, i.e.
+  // leftward in RTL) since most wheels/trackpads only emit deltaY.
   const wheelTsRef = useRef(0);
   useEffect(() => {
     const host = hostRef.current;

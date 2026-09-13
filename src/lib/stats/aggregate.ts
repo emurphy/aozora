@@ -105,7 +105,7 @@ export function intensityLevel(value: number, max: number): number {
   return 1;
 }
 
-/** "3h 24m" / "12m" / "45s" — compact human duration from milliseconds. */
+/** "3h 24m" / "12m" / "45s": compact human duration from milliseconds. */
 export function formatDuration(ms: number): string {
   const total = Math.max(0, Math.round((ms || 0) / 1000));
   const h = Math.floor(total / 3600);
@@ -129,7 +129,7 @@ export function tierStatus(
   return { tiers, next, achievedCount: tiers.filter((t) => t.achieved).length };
 }
 
-/** "1.2M" / "12.3k" / "942" — compact count formatting. */
+/** "1.2M" / "12.3k" / "942": compact count formatting. */
 export function formatCompact(n: number): string {
   const v = Math.round(n || 0);
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;

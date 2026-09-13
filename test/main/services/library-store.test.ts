@@ -10,7 +10,7 @@ vi.mock("electron", () => ({ app: { getPath: () => tmpDir } }));
 
 // better-sqlite3 is a native module compiled for Electron's ABI. Under plain
 // Node (Vitest) the binding usually fails to load with a NODE_MODULE_VERSION
-// mismatch — and it only loads lazily on `new Database()`, not at import time —
+// mismatch, and it only loads lazily on `new Database()`, not at import time,
 // so probe the binding eagerly here and skip the suite when it can't load,
 // rather than failing the run. (Rebuilding for Node's ABI would break the app,
 // which needs the Electron build.)

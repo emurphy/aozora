@@ -38,7 +38,7 @@ describe("resolveCoverHref", () => {
   });
 
   it("falls back to the first spine item when it is an image (OMF / fixed-layout)", () => {
-    // No cover-image property, no <meta name=cover> — the first spine item is
+    // No cover-image property, no <meta name=cover>: the first spine item is
     // the cover image (Open Manga Format).
     const opf = `<?xml version="1.0"?>
     <package>

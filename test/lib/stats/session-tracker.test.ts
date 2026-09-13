@@ -17,7 +17,7 @@ function run(positions: number[], start = 0): SessionAccumulator {
 
 describe("session-tracker: reading", () => {
   it("credits a steady, human-paced advance fully", () => {
-    // 10 chars/tick — well within the reading band.
+    // 10 chars/tick, well within the reading band.
     const acc = run([10, 20, 30, 40, 50]);
     expect(acc.charsAccum).toBe(50);
     expect(acc.state).toBe("reading");

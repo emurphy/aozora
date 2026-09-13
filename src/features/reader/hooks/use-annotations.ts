@@ -241,7 +241,7 @@ export function useAnnotations({
       if (modeRef.current === "fixed") return;
       const shadow = hostRef.current?.shadowRoot as (ShadowRoot & { getSelection?: () => Selection | null }) | undefined;
       const sel = shadow?.getSelection?.() ?? window.getSelection();
-      if (sel && !sel.isCollapsed) return; // fresh highlight — handleMouseUp owns it
+      if (sel && !sel.isCollapsed) return; // fresh highlight: handleMouseUp owns it
       const { root, base } = currentContentRoot();
       if (!root) return;
       const caret = caretRangeFromPoint(e.clientX, e.clientY, root);

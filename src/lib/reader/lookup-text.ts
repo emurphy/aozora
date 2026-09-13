@@ -2,12 +2,12 @@
  * Text-under-cursor extraction for the hover dictionary.
  *
  * Given a viewport point, resolves the text node under it and reads the run that
- * *starts* there — forward only, furigana excluded, bounded to the cursor's block
- * — for the main process to scan for the longest dictionary match. The result can
+ * *starts* there (forward only, furigana excluded, bounded to the cursor's block)
+ * for the main process to scan for the longest dictionary match. The result can
  * rebuild a live Range over the matched prefix for highlighting.
  *
  * Adapted from Yomitan's `dom-text-scanner.js` / `text-source-generator.js`
- * (GPL-3.0-or-later — see `yomitan/` and NOTICE.md). Our content is flattened
+ * (GPL-3.0-or-later; see `yomitan/` and NOTICE.md). Our content is flattened
  * EPUB markup in one shadow root, so we reuse the search index's
  * furigana-skipping walk (`getParagraphNodes` + `blockAncestor`) and keep the
  * scan small rather than handling arbitrary layouts / user-select:all.
@@ -72,7 +72,7 @@ function buildRange(segments: Segment[], length: number): Range | null {
  * through the block's text nodes (furigana and hidden nodes already excluded by
  * `getParagraphNodes`) until `maxLength` code units are collected or the block
  * ends. Zero-width / invisible characters are dropped from the run. A gaiji image
- * ends the run — a dictionary term can't span an image.
+ * ends the run: a dictionary term can't span an image.
  * Returns null when the start node isn't part of the readable text (e.g. the
  * cursor is over furigana or whitespace).
  *
@@ -88,7 +88,7 @@ export function extractRunAt(startNode: Text, startOffset: number, contentRoot: 
   let text = "";
   for (let i = startIdx; i < nodes.length && text.length < maxLength; i++) {
     const node = nodes[i];
-    if (node.nodeType !== Node.TEXT_NODE) break; // gaiji image — terms don't cross it
+    if (node.nodeType !== Node.TEXT_NODE) break; // gaiji image: terms don't cross it
     const data = (node as Text).data;
     const from = i === startIdx ? startOffset : 0;
     if (from >= data.length) continue;
@@ -96,7 +96,7 @@ export function extractRunAt(startNode: Text, startOffset: number, contentRoot: 
     // Walk char by char so zero-width chars drop from the scanned text while their
     // DOM position is tracked: each run of kept chars is one segment, split at each
     // skipped char, so `buildRange` still maps a match length back to a live Range
-    // (a skipped char inside the range is painted too — it's invisible anyway).
+    // (a skipped char inside the range is painted too, but it's invisible anyway).
     let segStart = -1; // source offset where the current kept run began
     let pos = from;
     for (; pos < data.length && text.length < maxLength; pos++) {
@@ -138,7 +138,7 @@ function caretFromPoint(x: number, y: number, shadowRoot: ShadowRoot | null): { 
 /**
  * Extracts the text run under a viewport point for dictionary lookup.
  * `contentRoot` is the reader's content element (`.aozora-content` in continuous
- * mode, `.aoz-page-content` in paginated mode) — it both bounds the scan to one
+ * mode, `.aoz-page-content` in paginated mode): it both bounds the scan to one
  * block and locates the shadow root to descend into. Returns null when the point
  * isn't over readable text (furigana, whitespace, images, or outside the root).
  */
@@ -154,7 +154,7 @@ export function cursorTextFromPoint(x: number, y: number, contentRoot: Element, 
 /**
  * Resolves a collapsed Range at the caret under a viewport point (piercing the
  * reader's shadow root), for callers that need the DOM position rather than the
- * forward text run — e.g. finding the sentence under the cursor. Returns null
+ * forward text run, e.g. finding the sentence under the cursor. Returns null
  * when the point isn't over readable text within `contentRoot`.
  */
 export function caretRangeFromPoint(x: number, y: number, contentRoot: Element): Range | null {

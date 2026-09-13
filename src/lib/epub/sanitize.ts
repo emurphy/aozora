@@ -1,7 +1,7 @@
 /**
  * Strips the executable surfaces out of book content, which shares a renderer
  * with the privileged `window.electronAPI`. `innerHTML` never ran `<script>`, so
- * inline `on*` was the only live path — a leftover, not a feature (scripted EPUB
+ * inline `on*` was the only live path: a leftover, not a feature (scripted EPUB
  * would need a sandboxed iframe, not this tree).
  *
  * Runs once on the flattened spine, the single source both reader modes,
@@ -35,7 +35,7 @@ function isExecutableUrl(value: string): boolean {
 
 /**
  * Removes script elements, inline handlers and executable URLs in place. Returns
- * the count stripped — 0 for a well-formed book, so non-zero is worth logging.
+ * the count stripped: 0 for a well-formed book, so non-zero is worth logging.
  */
 export function stripScripting(root: Element): number {
   let stripped = 0;

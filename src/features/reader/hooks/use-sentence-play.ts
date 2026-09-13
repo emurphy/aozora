@@ -36,7 +36,7 @@ export function useSentencePlay({ hostRef, modeRef, enabled, hotkey, fixedLayout
   const sentenceBtnHoveredRef = useRef(false);
   const sentencePlayKeyRef = useRef(""); // sentence currently shown (skip re-place)
   // Padded box spanning the button and the cursor that summoned it; while the
-  // cursor stays inside, we don't retarget — so reaching the button doesn't jump
+  // cursor stays inside, we don't retarget, so reaching the button doesn't jump
   // the selection to an adjacent sentence.
   const sentenceBtnBoxRef = useRef<{ left: number; right: number; top: number; bottom: number } | null>(null);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
@@ -45,7 +45,7 @@ export function useSentencePlay({ hostRef, modeRef, enabled, hotkey, fixedLayout
   enabledRef.current = enabled;
   hotkeyRef.current = hotkey;
 
-  // Read text aloud through VOICEVOX (no karaoke — used for the popup's single word).
+  // Read text aloud through VOICEVOX (no karaoke; used for the popup's single word).
   const speakText = useCallback((text: string) => {
     setKaraokeHighlight(null);
     const s = useTtsStore.getState();
@@ -70,7 +70,7 @@ export function useSentencePlay({ hostRef, modeRef, enabled, hotkey, fixedLayout
     if (sentenceTimerRef.current) return;
     sentenceTimerRef.current = window.setTimeout(() => {
       sentenceTimerRef.current = 0;
-      if (sentenceBtnHoveredRef.current) return; // settled on the button — keep it
+      if (sentenceBtnHoveredRef.current) return; // settled on the button, keep it
       clearSentencePlay();
     }, 500);
   }, [clearSentencePlay]);
@@ -108,7 +108,7 @@ export function useSentencePlay({ hostRef, modeRef, enabled, hotkey, fixedLayout
       if (!enabledRef.current || modeRef.current === "fixed") return;
 
       // Cursor still inside the current button's frozen box (button ∪ summon point):
-      // keep it pinned and cancel any pending dismissal — don't retarget en route.
+      // keep it pinned and cancel any pending dismissal, don't retarget en route.
       const box = sentenceBtnBoxRef.current;
       if (box && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) {
         if (sentenceTimerRef.current) {
@@ -133,7 +133,7 @@ export function useSentencePlay({ hostRef, modeRef, enabled, hotkey, fixedLayout
         clearTimeout(sentenceTimerRef.current);
         sentenceTimerRef.current = 0;
       }
-      // Still within the same sentence (but outside the box) — keep the button
+      // Still within the same sentence (but outside the box): keep the button
       // where it first appeared instead of chasing the cursor.
       if (sctx.text === sentencePlayKeyRef.current) return;
       sentencePlayKeyRef.current = sctx.text;

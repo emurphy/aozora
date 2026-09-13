@@ -1,14 +1,14 @@
 /**
- * Reading-vs-scrolling accounting — layout-independent core of the 1s sampler in
+ * Reading-vs-scrolling accounting: layout-independent core of the 1s sampler in
  * features/reader/use-reading-session.ts. Reading has a dwell structure
  * (pause-advance-pause); scrolling is sustained motion. So: a two-state machine
  * with hysteresis, sampled once per active second (idle/hidden ticks never reach
  * `advance`):
  *
- *   READING   — credit the net forward move, capped at READ_CAP/tick so a fast
+ *   READING:   credit the net forward move, capped at READ_CAP/tick so a fast
  *               flick can't inflate. Backward moves subtract (telescoping), so
  *               re-reads don't double-count and scroll-forward-then-back cancels.
- *   SCROLLING — entered when a tick exceeds SCROLL_ENTER (or on a JUMP teleport).
+ *   SCROLLING: entered when a tick exceeds SCROLL_ENTER (or on a JUMP teleport).
  *               Credits nothing while it lasts; baseline resyncs every tick so
  *               scrolled distance is never credited retroactively. Resumes
  *               READING only after speed stays below SETTLE for SETTLE_TICKS
@@ -44,7 +44,7 @@ export interface TrackerConfig {
 /**
  * Tuned for Japanese prose (chars ≈ position units). Fast JP reading ~10–12
  * chars/s, so READ_CAP=50 never clips genuine reading while SCROLL_ENTER=150
- * (9000/min — unreadable) reliably flags scrolling. SETTLE=60 ≥ READ_CAP so
+ * (9000/min, unreadable) reliably flags scrolling. SETTLE=60 ≥ READ_CAP so
  * normal reading counts as settled and can resume crediting after a scroll.
  */
 export const DEFAULT_TRACKER_CONFIG: TrackerConfig = {
@@ -73,7 +73,7 @@ export function advance(acc: SessionAccumulator, pos: number, config: TrackerCon
   let credited = 0;
 
   if (speed >= config.jumpThreshold) {
-    // Teleport (TOC/search/bookmark) — never reading. Force scrolling so the
+    // Teleport (TOC/search/bookmark), never reading. Force scrolling so the
     // reader must settle before crediting resumes; nothing credited.
     state = "scrolling";
     settleStreak = 0;
@@ -92,7 +92,7 @@ export function advance(acc: SessionAccumulator, pos: number, config: TrackerCon
   } else {
     // READING.
     if (speed > config.scrollEnter) {
-      state = "scrolling"; // a fast flick — switch and credit nothing this tick
+      state = "scrolling"; // a fast flick: switch and credit nothing this tick
       settleStreak = 0;
     } else {
       // Within the reading band: telescope (backward subtracts so re-reads don't
@@ -113,7 +113,7 @@ export function advance(acc: SessionAccumulator, pos: number, config: TrackerCon
  * Paginated-mode accounting. EVENT-driven (not sampled per second like
  * `advance`): position is static on a page then jumps a whole page span on flip,
  * which the per-tick sampler can't credit (every flip looks like scrolling,
- * every dwell tick has delta 0) — that's why charsRead was always 0 here.
+ * every dwell tick has delta 0).
  *
  * Instead, credit on the flip: the span of the page just finished, only when
  * dwelled on long enough (gates skim-flipping) and the move isn't a teleport or
@@ -126,7 +126,7 @@ export interface PaginatedAccumulator {
 }
 
 export interface PaginatedConfig {
-  /** |Δ| ≥ this ⇒ navigation teleport (TOC/search/bookmark) — resync, credit 0 */
+  /** |Δ| ≥ this ⇒ navigation teleport (TOC/search/bookmark): resync, credit 0 */
   jumpThreshold: number;
   /** must dwell at least this many active ms on a page before its span counts */
   minDwellMs: number;

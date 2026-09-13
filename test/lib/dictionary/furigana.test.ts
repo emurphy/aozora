@@ -36,7 +36,7 @@ describe("distributeFurigana", () => {
   });
 
   it("falls back to whole-word ruby when the reading can't be aligned", () => {
-    // 今日 → きょう is irregular (can't be split per-char) — one fallback segment.
+    // 今日 → きょう is irregular (can't be split per-char), so one fallback segment.
     expect(fmt("今日", "きょう")).toBe("今日:きょう");
   });
 

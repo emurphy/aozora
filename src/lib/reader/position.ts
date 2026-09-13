@@ -19,7 +19,7 @@ export interface Anchor {
  * Walks the rendered content in document order and returns an ordered list of
  * `{ el, charBefore }` anchors plus the total character count. `charBefore` is
  * the cumulative character count before the anchor element, so the array is
- * non-decreasing in `charBefore` — both lookups below binary-search it.
+ * non-decreasing in `charBefore`, which both lookups below binary-search.
  */
 export function collectAnchors(contentEl: Element): { anchors: Anchor[]; total: number } {
   const nodes = getParagraphNodes(contentEl);
@@ -49,7 +49,7 @@ function viewportCentre(host: HTMLElement): { hr: DOMRect; x: number; y: number 
 }
 
 /**
- * The character offset at the viewport centre — i.e. the reader's current
+ * The character offset at the viewport centre, i.e. the reader's current
  * `exploredCharCount`. Binary-searches anchors on the reading-direction axis
  * (right→left x for vertical, top→bottom y for horizontal).
  */

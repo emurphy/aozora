@@ -55,7 +55,7 @@ const DEFAULTS: TtsConfig = {
   pauseLength: 1,
   furiganaReadings: true,
   voicevoxServer: DEFAULT_VOICEVOX_SERVER,
-  voicevoxSpeaker: 3, // ずんだもん（ノーマル） — present in stock VOICEVOX
+  voicevoxSpeaker: 3, // ずんだもん（ノーマル）, present in stock VOICEVOX
   sentenceHotkey: "alt",
 };
 

@@ -185,7 +185,7 @@ interface Piece {
 /**
  * Maps a block-text char offset to a live (text node, offset) boundary, clamped
  * into the nearest text node. A boundary landing on a gaiji placeholder snaps to
- * an adjacent text node — the highlight only paints text, so this is invisible.
+ * an adjacent text node; the highlight only paints text, so this is invisible.
  */
 function locate(pieces: Piece[], offset: number): { node: Text; offset: number } | null {
   let fallback: { node: Text; offset: number } | null = null;
@@ -200,16 +200,16 @@ function locate(pieces: Piece[], offset: number): { node: Text; offset: number }
 
 /** The sentence around a match, plus a way to build Ranges over sub-slices of it. */
 export interface SentenceContext {
-  /** The sentence as displayed (terminator included, trimmed) — for highlighting. */
+  /** The sentence as displayed (terminator included, trimmed), for highlighting. */
   text: string;
   /**
-   * The same sentence with ruby bases replaced by their furigana readings — what
+   * The same sentence with ruby bases replaced by their furigana readings: what
    * to synthesize when reading aloud. Equals `text` when the sentence has no ruby.
    */
   spoken: string;
   /**
    * Maps a `spoken`-relative offset (0..spoken.length) to the corresponding
-   * `text`-relative offset — exact outside ruby, proportional within a reading.
+   * `text`-relative offset: exact outside ruby, proportional within a reading.
    * For the karaoke highlight: characters-spoken → characters-to-paint.
    */
   displayedFromSpoken(offset: number): number;
@@ -220,7 +220,7 @@ export interface SentenceContext {
 /**
  * Like `sentenceAround`, but also returns a `rangeForSlice` so callers can paint
  * a growing highlight over the sentence (karaoke read-aloud). Returns null when
- * the match node can't be located in its block — the caller falls back to plain
+ * the match node can't be located in its block; the caller falls back to plain
  * playback without highlighting.
  */
 export function sentenceContextAround(range: Range, contentRoot: Element): SentenceContext | null {

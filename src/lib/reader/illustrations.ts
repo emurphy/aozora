@@ -4,8 +4,8 @@
  * Walks the whole document once, accumulating the Japanese character count with
  * the same rules as the reading-position model (`countJapanese` for text, gaiji
  * = 1 char). Each non-gaiji image records the running count as its `charOffset`,
- * so clicking it can `jumpToChar` to the right spot in either reading mode —
- * this is derived from the parsed HTML, not the live (mode-dependent) DOM.
+ * so clicking it can `jumpToChar` to the right spot in either reading mode. It
+ * is derived from the parsed HTML, not the live (mode-dependent) DOM.
  */
 
 import { countJapanese, isElementGaiji } from "@/lib/epub/dom-utils";
@@ -15,7 +15,7 @@ export interface Illustration {
   key: string;
   /** Live object URL for the thumbnail. */
   url: string;
-  /** Cumulative Japanese characters before the image — the reader's nav offset. */
+  /** Cumulative Japanese characters before the image: the reader's nav offset. */
   charOffset: number;
   /** The image's alt text, if any (for the tooltip/label). */
   alt: string;

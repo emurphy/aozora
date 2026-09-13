@@ -42,7 +42,7 @@ function MilestoneCard({ icon: Icon, label, value, format, status }: MilestoneCa
         ))}
       </div>
       <p className="px-3 text-[11px] text-muted-foreground">
-        {status.next != null ? `Now ${format(value)} · next ${format(status.next)}` : `All reached — ${format(value)}`}
+        {status.next != null ? `Now ${format(value)} · next ${format(status.next)}` : `All reached · ${format(value)}`}
       </p>
     </Card>
   );

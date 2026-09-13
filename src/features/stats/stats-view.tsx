@@ -149,7 +149,7 @@ export function StatsView() {
               <BarChart3 className="size-10 text-muted-foreground" strokeWidth={1.5} />
               <div className="space-y-1">
                 <p className="text-sm font-medium">No reading recorded yet</p>
-                <p className="text-xs text-muted-foreground">Open a book and start reading — your activity will show up here.</p>
+                <p className="text-xs text-muted-foreground">Open a book and start reading; your activity will show up here.</p>
               </div>
             </div>
           </div>
@@ -211,7 +211,7 @@ export function StatsView() {
                   <div className="flex items-center justify-between px-3">
                     <p className="text-[11px] text-muted-foreground">
                       {selected
-                        ? `${selectedDay} — ${formatCompact(selected.chars || 0)} chars · ${formatDuration(selected.ms || 0)} · ${selected.sessions} session${selected.sessions === 1 ? "" : "s"}`
+                        ? `${selectedDay} · ${formatCompact(selected.chars || 0)} chars · ${formatDuration(selected.ms || 0)} · ${selected.sessions} session${selected.sessions === 1 ? "" : "s"}`
                         : "Click a day for details"}
                     </p>
                     <HeatmapLegend />

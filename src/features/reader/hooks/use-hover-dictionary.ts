@@ -98,7 +98,7 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
     if (clearTimerRef.current) return;
     clearTimerRef.current = window.setTimeout(() => {
       clearTimerRef.current = 0;
-      if (popupHoveredRef.current) return; // cursor settled in the popup — keep it
+      if (popupHoveredRef.current) return; // cursor settled in the popup, keep it
       clearLookup();
     }, 220);
   }, [clearLookup]);
@@ -123,7 +123,7 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
         return;
       }
       if (source.text === lastQueryRef.current) {
-        // Back on the run we already resolved — cancel any pending dismissal.
+        // Back on the run we already resolved, so cancel any pending dismissal.
         if (clearTimerRef.current) {
           clearTimeout(clearTimerRef.current);
           clearTimerRef.current = 0;

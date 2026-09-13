@@ -11,7 +11,7 @@ const STORE = "books";
 // v3: added renditionSpread (book-level OPF spread mode) for the fixed-layout viewer.
 // v4: content is script-stripped at parse time now (epub/sanitize.ts); cached HTML
 // predates that pass, so it can't be trusted.
-// Policy is forward-only — drop the old cache rather than migrate, so previously-opened
+// Policy is forward-only: drop the old cache rather than migrate, so previously-opened
 // books re-parse and pick up the new fields.
 const DB_VERSION = 4;
 

@@ -13,7 +13,7 @@ export interface FxlZoomHandle {
   /** Whether the content is currently magnified (pan/consume-wheel active). */
   isZoomed: () => boolean;
   /** Wheel: Ctrl/⌘ (or trackpad pinch) zooms at the cursor; a plain wheel pans when
-   *  zoomed. Returns true if it consumed the event — the caller flips pages only on
+   *  zoomed. Returns true if it consumed the event; the caller flips pages only on
    *  false. */
   handleWheel: (e: WheelEvent) => boolean;
   /** Double-click toggles between fit and DBLCLICK_SCALE, centred on the cursor. */
@@ -28,7 +28,7 @@ export interface FxlZoomHandle {
  * dragging stays at native speed. Gestures: Ctrl/⌘+wheel and trackpad pinch (which
  * Chromium delivers as Ctrl+wheel) zoom at the cursor; double-click toggles; drag
  * pans while zoomed. The maths lives in `lib/reader/zoom` (unit-tested); this hook
- * only bridges it to the DOM. Zoom resets whenever `setTarget` is called — the
+ * only bridges it to the DOM. Zoom resets whenever `setTarget` is called: the
  * viewer rebuilds the spread on every flip/resize, so a page turn returns to fit.
  */
 export function useFxlZoom(stageRef: RefObject<Element | null>): FxlZoomHandle {

@@ -24,8 +24,8 @@ export function generateStyleSheet(data: Record<string, string | Blob>, contents
 /**
  * Drops `line-height` declarations from the book's own CSS so the reader's
  * setting (an inherited var on `.aozora-content`) always reaches the text.
- * Otherwise a book that pins line-height on an element — notably Calibre exports
- * carrying it on the `<body>` class, preserved on `.aoz-book-body-wrapper` — wins
+ * Otherwise a book that pins line-height on an element (notably Calibre exports
+ * carrying it on the `<body>` class, preserved on `.aoz-book-body-wrapper`) wins
  * over the inherited value and the line-height control does nothing. Mirrors ttsu
  * (references/ttsu/.../format-style-sheet.ts), which strips it the same way.
  *

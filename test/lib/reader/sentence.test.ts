@@ -51,7 +51,7 @@ describe("sentenceContextAround", () => {
 
   it("maps spoken offsets back onto the displayed sentence", () => {
     const sctx = contextFor("<p>これは<ruby>漢字<rt>かんじ</rt></ruby>です。次の文。</p>");
-    // Outside ruby the texts are identical — exact.
+    // Outside ruby the texts are identical, so the mapping is exact.
     expect(sctx.displayedFromSpoken(3)).toBe(3);
     // The whole reading spoken (かんじ, 3 chars) → the whole base (漢字, 2 chars).
     expect(sctx.displayedFromSpoken(6)).toBe(5);

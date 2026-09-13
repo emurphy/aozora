@@ -31,8 +31,8 @@ function isNoteref(a: Element): boolean {
 /**
  * Scans flattened reader HTML (object URLs already swapped in) and returns a map
  * of fragment id → note inner HTML. Bodies are found two ways and merged:
- * (1) elements that declare note semantics (epub:type/role) — the EPUB3 norm;
- * (2) <aside> targets reached from a noteref link — catches books that mark the
+ * (1) elements that declare note semantics (epub:type/role), the EPUB3 norm;
+ * (2) <aside> targets reached from a noteref link, which catches books that mark the
  * link but leave the aside untyped. Back-links inside notes point at prose
  * markers (not <aside>), so they never pollute the map.
  */

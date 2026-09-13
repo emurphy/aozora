@@ -4,12 +4,12 @@
  * No separate text store: the flattened book HTML (cached in IndexedDB) is the
  * only text source. We walk it like the reading-position model
  * (`getParagraphNodes` + `getCharacterCount`), grouping into block units and
- * recording each block's cumulative char offset — the same `exploredCharCount`
+ * recording each block's cumulative char offset: the same `exploredCharCount`
  * the reader navigates by, so a hit's `charOffset` feeds `jumpToChar` /
  * `restoreToChar` directly in either mode.
  *
  * Matching normalization is length-preserving (every transform is 1:1), so a
- * normalized-string index is also a valid raw-text index — keeping snippets and
+ * normalized-string index is also a valid raw-text index, keeping snippets and
  * highlight ranges aligned. `<rt>` readings are excluded by `getParagraphNodes`,
  * so queries match base text across furigana.
  */
@@ -105,7 +105,7 @@ export function normalize(str: string | null | undefined): string {
  * Walks the rendered (or detached) content into block-level text units. Each
  * block carries its cumulative character offset, its raw text, and the live text
  * nodes it spans (used to build highlight ranges). Image-only blocks (no text)
- * are dropped — there is nothing to search or highlight in them.
+ * are dropped: there is nothing to search or highlight in them.
  */
 export function collectBlocks(rootEl: Element): Block[] {
   const nodes = getParagraphNodes(rootEl);
