@@ -573,8 +573,6 @@ export interface VocabStats {
   daily: { day: string; words: number; lookups: number }[];
 }
 
-export type VocabExportResult = { ok: true; path: string } | { ok: false; error: string } | { ok: false; canceled: true };
-
 /* ── Backup / restore ───────────────────────────────────────────────────── */
 
 /** First entry in a backup archive: format + what's inside. */

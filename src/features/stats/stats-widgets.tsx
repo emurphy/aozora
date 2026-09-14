@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   label: string;
   value: React.ReactNode;
   sub?: React.ReactNode;
@@ -14,7 +14,7 @@ export function StatCard({ icon: Icon, label, value, sub }: StatCardProps) {
   return (
     <Card size="sm" className="gap-2">
       <div className="flex items-center gap-2 px-3 text-muted-foreground">
-        <Icon className="size-3.5" />
+        {Icon && <Icon className="size-3.5" />}
         <span className="text-[11px] font-medium uppercase tracking-wider">{label}</span>
       </div>
       <div className="px-3">

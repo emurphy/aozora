@@ -9,9 +9,6 @@ export const vocabApi = {
   /** Records a batch of lookups, returning the words they touched. */
   record: (items: VocabLookupInput[]) => ipcRenderer.invoke("vocab:record", items),
 
-  /** The stored rows for the words a popup is showing (missing ones are omitted). */
-  getMany: (words: { expression: string; reading: string }[]) => ipcRenderer.invoke("vocab:get-many", words),
-
   list: (filter: VocabFilter) => ipcRenderer.invoke("vocab:list", filter),
 
   /** Every recorded sighting of one word, most recent first. */
@@ -28,7 +25,4 @@ export const vocabApi = {
   remove: (id: string) => ipcRenderer.invoke("vocab:remove", id),
 
   stats: () => ipcRenderer.invoke("vocab:stats"),
-
-  /** Saves already-formatted rows to a file the user picks. */
-  exportFile: (suggestedName: string, contents: string) => ipcRenderer.invoke("vocab:export", suggestedName, contents),
 };

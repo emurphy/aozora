@@ -189,8 +189,6 @@ export function ReaderView() {
     lookup,
     capturing,
     clearLookup,
-    vocab,
-    setVocabState,
     mineEntry,
     mineKanji,
     onMouseMove: onDictMouseMove,
@@ -862,8 +860,6 @@ export function ReaderView() {
           onMine={ankiEnabled ? mineEntry : undefined}
           onMineKanji={ankiKanjiEnabled ? mineKanji : undefined}
           onSpeak={ttsEnabled ? speakText : undefined}
-          vocab={vocab}
-          onSetVocabState={setVocabState}
           hiddenForCapture={capturing}
         />
         {sentencePlay && (

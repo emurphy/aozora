@@ -42,7 +42,7 @@
 - **Vocabulary tracking**: every word you look up is saved with the sentence it came
   from and the book it was met in. The **Words** page lists them with how often you have
   met each one, lets you mark them **learning / known / ignored**, mine a batch to Anki,
-  export to CSV/TSV, and jump straight back to any passage a word appeared in.
+  and jump straight back to any passage a word appeared in.
 - **Reading statistics**: automatically tracks your reading time and compiles it into a
   visual dashboard: a GitHub-style heatmap, reading streaks, a daily goal, milestones, and
   per-book totals.

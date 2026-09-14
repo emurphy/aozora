@@ -24,7 +24,6 @@ import type {
   UpdateAnnotationPayload,
   UpdateBookPayload,
   VocabEntry,
-  VocabExportResult,
   VocabFilter,
   VocabLookupInput,
   VocabOccurrence,
@@ -80,7 +79,6 @@ export interface StatsApi {
 
 export interface VocabApi {
   record(items: VocabLookupInput[]): Promise<VocabEntry[]>;
-  getMany(words: { expression: string; reading: string }[]): Promise<VocabEntry[]>;
   list(filter: VocabFilter): Promise<VocabEntry[]>;
   occurrences(vocabId: string): Promise<VocabOccurrence[]>;
   setState(payload: SetVocabStatePayload): Promise<VocabEntry | null>;
@@ -88,7 +86,6 @@ export interface VocabApi {
   markMined(expression: string, reading: string): Promise<VocabEntry | null>;
   remove(id: string): Promise<boolean>;
   stats(): Promise<VocabStats>;
-  exportFile(suggestedName: string, contents: string): Promise<VocabExportResult>;
 }
 
 export interface DictionaryApi {

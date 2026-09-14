@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, Check, Download, GraduationCap, Languages, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { BookOpen, Languages, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ import { useLibraryStore } from "@/stores/library-store";
 import { useReaderStore } from "@/stores/reader-store";
 import { useAnkiStore } from "@/stores/anki-store";
 import { relativeTime } from "@/lib/format";
-import { toCsv, toTsv } from "@/lib/vocab/export";
 import { cardDataFromEntry, buildNote } from "@/lib/dictionary/anki-note";
 import { cn } from "@/lib/utils";
 import { VOCAB_STATES, type VocabEntry, type VocabOccurrence, type VocabState, type VocabStats } from "@/lib/types";
@@ -180,15 +179,6 @@ export function WordsView() {
     openReader(book, occurrence.charOffset);
   };
 
-  /** Exports the selection when there is one, else everything on screen. */
-  const exportRows = async (format: "csv" | "tsv") => {
-    const rowsOut = selected.size ? visible.filter((row) => selected.has(row.id)) : visible;
-    if (!rowsOut.length) return;
-    const result = await api().exportFile(`aozora-words.${format}`, format === "csv" ? toCsv(rowsOut) : toTsv(rowsOut));
-    if (result.ok) toast.success(`Exported ${rowsOut.length} words.`);
-    else if (!("canceled" in result)) toast.error(result.error);
-  };
-
   /**
    * Mines the selection to Anki. The glossary isn't stored, so each word is
    * looked up again; the sentence and book come from its last occurrence.
@@ -251,10 +241,10 @@ export function WordsView() {
           </header>
 
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard icon={Languages} label="Words" value={stats?.total ?? 0} sub={`${stats?.lookupCount ?? 0} lookups`} />
-            <StatCard icon={Sparkles} label="New today" value={stats?.newToday ?? 0} sub="first met today" />
-            <StatCard icon={GraduationCap} label="Learning" value={stats?.byState.learning ?? 0} sub={`${stats?.minedCount ?? 0} in Anki`} />
-            <StatCard icon={Check} label="Known" value={stats?.byState.known ?? 0} sub={`${stats?.byState.new ?? 0} still new`} />
+            <StatCard label="Words" value={stats?.total ?? 0} sub={`${stats?.lookupCount ?? 0} lookups`} />
+            <StatCard label="New today" value={stats?.newToday ?? 0} sub="first met today" />
+            <StatCard label="Learning" value={stats?.byState.learning ?? 0} sub={`${stats?.minedCount ?? 0} in Anki`} />
+            <StatCard label="Known" value={stats?.byState.known ?? 0} sub={`${stats?.byState.new ?? 0} still new`} />
           </section>
 
           {/* Filters. */}
@@ -309,17 +299,6 @@ export function WordsView() {
                 ))}
               </SelectContent>
             </Select>
-
-            <div className="ml-auto flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => exportRows("csv")} disabled={!visible.length}>
-                <Download className="size-3.5" />
-                CSV
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => exportRows("tsv")} disabled={!visible.length}>
-                <Download className="size-3.5" />
-                TSV
-              </Button>
-            </div>
           </div>
 
           {/* Bulk actions, only while something is picked. */}
@@ -363,17 +342,17 @@ export function WordsView() {
                   <th className="w-8 px-2 py-2">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
                   </th>
-                  <th className="px-2 py-2 font-medium">Word</th>
+                  <th className="w-40 px-2 py-2 font-medium">Word</th>
                   <th className="w-20 px-2 py-2 font-medium">State</th>
-                  <th className="w-14 px-2 py-2 text-right font-medium">Seen</th>
-                  <th className="w-20 px-2 py-2 font-medium">Last met</th>
+                  <th className="w-12 px-2 py-2 text-right font-medium">Seen</th>
+                  <th className="w-24 px-2 py-2 font-medium">Last met</th>
                   <th className="px-2 py-2 font-medium">Sentence</th>
                   <th className="w-8 px-2 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {visible.map((entry) => (
-                  <tr key={entry.id} className="group border-b border-border/60 hover:bg-muted/40">
+                  <tr key={entry.id} className="group border-b border-border/60 align-top hover:bg-muted/40">
                     <td className="px-2 py-1.5">
                       <Checkbox
                         checked={selected.has(entry.id)}
@@ -383,7 +362,6 @@ export function WordsView() {
                     </td>
                     <td className="cursor-pointer px-2 py-1.5" onClick={() => void openDetail(entry)}>
                       <Headword entry={entry} />
-                      {entry.lastBookTitle && <span className="block max-w-56 truncate text-[10px] text-muted-foreground">{entry.lastBookTitle}</span>}
                     </td>
                     <td className="px-2 py-1.5">
                       <span className={cn("text-[11px]", STATE_STYLES[entry.state])}>{STATE_LABELS[entry.state]}</span>
@@ -391,10 +369,8 @@ export function WordsView() {
                     </td>
                     <td className="px-2 py-1.5 text-right tabular-nums">{entry.lookupCount}</td>
                     <td className="px-2 py-1.5 text-[11px] text-muted-foreground">{relativeTime(entry.lastAt)}</td>
-                    <td className="max-w-0 px-2 py-1.5">
-                      <span className="block truncate text-[11px] text-muted-foreground" title={entry.lastSentence ?? ""}>
-                        {entry.lastSentence}
-                      </span>
+                    <td className="px-2 py-1.5">
+                      <span className="block text-[11px] leading-relaxed text-muted-foreground">{entry.lastSentence}</span>
                     </td>
                     <td className="px-2 py-1.5">
                       <AlertDialog>

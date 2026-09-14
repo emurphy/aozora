@@ -700,19 +700,7 @@ export const libraryStore = {
     return rowToVocab(row);
   },
 
-  /** The known words among these, for the popup (one lookup can show several senses). */
-  getVocabMany(words: { expression: string; reading: string }[]): VocabEntry[] {
-    return words.flatMap((word) => {
-      const entry = this.getVocab(word.expression, word.reading ?? "");
-      return entry ? [entry] : [];
-    });
-  },
-
-  /**
-   * Words matching the filter, most recently met first. Upserting on state means
-   * a word can be marked known from the popup before it has ever been recorded
-   * (clicking a sense other than the one auto-captured).
-   */
+  /** Words matching the filter, most recently met first. */
   listVocab({ state, bookId, search, limit }: VocabFilter): VocabEntry[] {
     const where: string[] = [];
     const params: SqlParams = { limit: Math.min(Math.max(limit ?? 1000, 1), 5000) };
