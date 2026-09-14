@@ -3,6 +3,7 @@ import { migrate1 } from "./migrate-1.js";
 import { migrate2 } from "./migrate-2.js";
 
 export { runMigrations, type Migration } from "./runner.js";
+export { libraryMigrations } from "./library.js";
 
 /**
  * Migrations for the dictionary database (userData/dictionary.db), in ascending

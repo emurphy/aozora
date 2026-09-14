@@ -129,6 +129,7 @@ export function ReaderView() {
 
   const dictEnabled = useDictionaryStore((s) => s.enabled);
   const dictModifier = useDictionaryStore((s) => s.modifier);
+  const trackVocabulary = useDictionaryStore((s) => s.trackVocabulary);
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [parseToken, setParseToken] = useState(0); // bumped when parsed content is ready
@@ -188,6 +189,8 @@ export function ReaderView() {
     lookup,
     capturing,
     clearLookup,
+    vocab,
+    setVocabState,
     mineEntry,
     mineKanji,
     onMouseMove: onDictMouseMove,
@@ -195,7 +198,16 @@ export function ReaderView() {
     onPopupLayout,
     onPopupEnter,
     onPopupLeave,
-  } = useHoverDictionary({ hostRef, modeRef, book, enabled: dictEnabled, modifier: dictModifier, fixedLayout });
+  } = useHoverDictionary({
+    hostRef,
+    modeRef,
+    charRef,
+    book,
+    enabled: dictEnabled,
+    modifier: dictModifier,
+    fixedLayout,
+    trackVocabulary,
+  });
   const {
     sentencePlay,
     speakText,
@@ -413,7 +425,8 @@ export function ReaderView() {
         setIllustrations(parsed.fixedLayout ? [] : collectIllustrations(parsed.elementHtml, keyToUrl));
         const initialVertical = resolveVertical(useSettingsStore.getState().writingMode, parsed.vertical);
         verticalRef.current = initialVertical;
-        charRef.current = book.exploredCharCount || 0;
+        // A jump target (from the vocabulary page) wins over the saved position.
+        charRef.current = useReaderStore.getState().takeStartChar() ?? book.exploredCharCount ?? 0;
         if (parsed.fixedLayout) {
           fixedDataRef.current = { pages: parsed.pages || [], ppd: parsed.ppd, bookViewport: parsed.bookViewport, renditionSpread: parsed.renditionSpread };
         }
@@ -849,6 +862,8 @@ export function ReaderView() {
           onMine={ankiEnabled ? mineEntry : undefined}
           onMineKanji={ankiKanjiEnabled ? mineKanji : undefined}
           onSpeak={ttsEnabled ? speakText : undefined}
+          vocab={vocab}
+          onSetVocabState={setVocabState}
           hiddenForCapture={capturing}
         />
         {sentencePlay && (

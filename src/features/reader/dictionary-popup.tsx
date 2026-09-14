@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Check, Loader2, Plus, Volume2 } from "lucide-react";
-import type { DictionaryEntry, KanjiEntry, LookupResult } from "@/lib/types";
+import type { DictionaryEntry, KanjiEntry, LookupResult, VocabEntry, VocabState } from "@/lib/types";
 import type { MineStatus } from "@/lib/dictionary/anki-note";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { relativeTime } from "@/lib/format";
+import { wordKey } from "@/lib/vocab/buffer";
 import { useAnchoredPosition } from "./hooks/use-anchored-position";
 import { downstepNumber } from "@/lib/dictionary/pitch";
 import { distributeFurigana } from "@/lib/dictionary/furigana";
@@ -47,6 +50,10 @@ interface Props {
   onMineKanji?: (kanji: KanjiEntry) => Promise<MineStatus>;
   /** Reads a headword aloud (its reading). Absent hides the per-entry speaker button. */
   onSpeak?: (text: string) => void;
+  /** Stored vocabulary rows for the shown senses, keyed by wordKey. */
+  vocab?: Record<string, VocabEntry>;
+  /** Moves a sense between vocabulary states. Absent hides the state control. */
+  onSetVocabState?: (expression: string, reading: string, state: VocabState) => void;
   /** Kept mounted but visually hidden while a mining screenshot is captured, so
    *  the popup doesn't occlude the sentence in the image. */
   hiddenForCapture?: boolean;
@@ -66,6 +73,40 @@ function MineButton({ status, onClick }: { status?: MineStatus | "loading"; onCl
       {status === "loading" ? <Loader2 className="size-3 animate-spin" /> : done ? <Check className="size-3" /> : <Plus className="size-3" />}
       Anki
     </button>
+  );
+}
+
+/**
+ * Vocabulary state for one sense, plus how often it has been met. "New" is the
+ * implicit state, so it has no button: deselecting the active one returns to it.
+ */
+function VocabControl({ entry, onSet }: { entry: VocabEntry | undefined; onSet: (state: VocabState) => void }) {
+  const state = entry?.state ?? "new";
+  const seen = entry && entry.lookupCount > 0 ? `Seen ${entry.lookupCount}×` : null;
+  const first = entry?.lookupCount ? relativeTime(entry.firstAt) : null;
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        spacing={0}
+        size="sm"
+        value={state === "new" ? "" : state}
+        onValueChange={(v) => onSet((v || "new") as VocabState)}
+        className="[&_button]:h-6 [&_button]:px-1.5 [&_button]:text-[10px]"
+      >
+        <ToggleGroupItem value="learning">Learning</ToggleGroupItem>
+        <ToggleGroupItem value="known">Known</ToggleGroupItem>
+        <ToggleGroupItem value="ignored">Ignore</ToggleGroupItem>
+      </ToggleGroup>
+      {seen && (
+        <span className="text-[10px] text-muted-foreground">
+          {seen}
+          {first ? ` · first ${first}` : ""}
+          {entry?.minedAt ? " · in Anki" : ""}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -106,7 +147,19 @@ function Furigana({ expression, reading }: { expression: string; reading: string
   );
 }
 
-export function DictionaryPopup({ result, anchor, onMouseEnter, onMouseLeave, onLayout, onMine, onMineKanji, onSpeak, hiddenForCapture }: Props) {
+export function DictionaryPopup({
+  result,
+  anchor,
+  onMouseEnter,
+  onMouseLeave,
+  onLayout,
+  onMine,
+  onMineKanji,
+  onSpeak,
+  vocab,
+  onSetVocabState,
+  hiddenForCapture,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const pos = useAnchoredPosition(ref, anchor, result, onLayout);
   // Per-entry / per-kanji mining status, reset whenever the looked-up word changes.
@@ -159,6 +212,13 @@ export function DictionaryPopup({ result, anchor, onMouseEnter, onMouseLeave, on
                 {onMine && <MineButton status={mined[i]} onClick={() => mine(entry, i)} />}
               </div>
             </div>
+
+            {onSetVocabState && (
+              <VocabControl
+                entry={vocab?.[wordKey(entry.expression, entry.reading ?? "")]}
+                onSet={(state) => onSetVocabState(entry.expression, entry.reading ?? "", state)}
+              />
+            )}
 
             {entry.frequencies.length > 0 && (
               <div className="mt-1 flex flex-wrap items-center gap-1">

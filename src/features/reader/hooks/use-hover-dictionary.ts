@@ -1,23 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { AnkiScreenshotRequest, Book, DictionaryEntry, KanjiEntry, LookupResult } from "@/lib/types";
+import type { AnkiScreenshotRequest, Book, DictionaryEntry, KanjiEntry, LookupResult, VocabEntry, VocabState } from "@/lib/types";
 import { setLookupHighlight } from "@/lib/reader/highlight";
 import { cursorTextFromPoint } from "@/lib/reader/lookup-text";
-import { sentenceClozeAround, type SentenceCloze } from "@/lib/reader/sentence";
+import { sentenceAround, sentenceClozeAround, type SentenceCloze } from "@/lib/reader/sentence";
 import { blockAncestor } from "@/lib/reader/search";
 import { useAnkiStore } from "@/stores/anki-store";
 import { modifierHeld, type LookupModifier } from "@/stores/dictionary-store";
 import { cardDataFromEntry, cardDataFromKanji, buildNote, buildKanjiNote, type MineStatus } from "@/lib/dictionary/anki-note";
+import { createVocabBuffer, drainLookups, pushLookup, wordKey } from "@/lib/vocab/buffer";
 
 type ReaderMode = "continuous" | "paginated" | "fixed";
+
+// A word counts as looked up only once the popup has stood still this long:
+// hover-scanning fires on every cursor move, so without it every word the cursor
+// crosses on the way somewhere would be recorded.
+const DWELL_MS = 400;
+// Lookups are flushed in batches; one write per word would hit SQLite on a hot path.
+const FLUSH_MS = 15_000;
 
 interface Options {
   hostRef: React.RefObject<HTMLDivElement | null>;
   modeRef: React.RefObject<ReaderMode>;
+  /** Current reading position, stored with each lookup so it can be found again. */
+  charRef: React.RefObject<number>;
   book: Book | null;
   enabled: boolean;
   modifier: LookupModifier;
   fixedLayout: boolean;
+  /** Whether looked-up words are saved to the vocabulary list. */
+  trackVocabulary: boolean;
 }
 
 /**
@@ -28,7 +40,7 @@ interface Options {
  * mines the shown entry to Anki. Position bookkeeping stays in the reader; this
  * hook only reads `hostRef`/`modeRef`.
  */
-export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, fixedLayout }: Options) {
+export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, modifier, fixedLayout, trackVocabulary }: Options) {
   // Last cursor position (so a modifier keydown can look up without moving the
   // mouse), a sequence guard against stale async results, a rAF gate to coalesce
   // mousemoves, and the last queried run text (skip re-query).
@@ -57,11 +69,91 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
   // Hides the popup for one repaint while a mining screenshot is captured.
   const [capturing, setCapturing] = useState(false);
 
+  // Vocabulary capture: a dwell timer decides what counts as "looked up", the
+  // buffer batches the writes. Refs mirror props so the timers read fresh values.
+  const bufferRef = useRef(createVocabBuffer());
+  const dwellTimerRef = useRef(0);
+  const flushTimerRef = useRef(0);
+  const trackRef = useRef(trackVocabulary);
+  const bookRef = useRef(book);
+  trackRef.current = trackVocabulary;
+  bookRef.current = book;
+  /** Stored rows for the words the popup is showing, keyed by wordKey. */
+  const [vocab, setVocab] = useState<Record<string, VocabEntry>>({});
+
+  const mergeVocab = useCallback((entries: VocabEntry[]) => {
+    if (!entries.length) return;
+    setVocab((prev) => {
+      const next = { ...prev };
+      for (const entry of entries) next[wordKey(entry.expression, entry.reading)] = entry;
+      return next;
+    });
+  }, []);
+
+  /** Writes whatever the buffer holds. Cheap when empty, so safe to call often. */
+  const flushLookups = useCallback(() => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = 0;
+    }
+    const items = drainLookups(bufferRef.current);
+    if (!items.length) return;
+    window.electronAPI.vocab
+      .record(items)
+      .then(mergeVocab)
+      .catch(() => {});
+  }, [mergeVocab]);
+
+  // Arms the dwell timer for a fresh result: on expiry the top entry is queued
+  // and every shown sense's stored state is fetched (so the popup can mark them).
+  const captureLookup = useCallback(
+    (result: LookupResult) => {
+      if (dwellTimerRef.current) clearTimeout(dwellTimerRef.current);
+      if (!result.entries.length) return;
+      dwellTimerRef.current = window.setTimeout(() => {
+        dwellTimerRef.current = 0;
+        const words = result.entries.map((e) => ({ expression: e.expression, reading: e.reading ?? "" }));
+        window.electronAPI.vocab
+          .getMany(words)
+          .then(mergeVocab)
+          .catch(() => {});
+
+        if (!trackRef.current) return;
+        const top = result.entries[0];
+        const ctx = mineCtxRef.current;
+        const accepted = pushLookup(bufferRef.current, {
+          expression: top.expression,
+          reading: top.reading ?? "",
+          bookId: bookRef.current?.id ?? null,
+          charOffset: charRef.current ?? null,
+          surface: ctx ? ctx.range.toString() : null,
+          sentence: ctx ? sentenceAround(ctx.range, ctx.contentRoot) : null,
+          at: Date.now(),
+        });
+        if (accepted && !flushTimerRef.current) flushTimerRef.current = window.setTimeout(flushLookups, FLUSH_MS);
+      }, DWELL_MS);
+    },
+    [charRef, flushLookups, mergeVocab],
+  );
+
+  /** Moves a word between states from the popup, creating it if it was never captured. */
+  const setVocabState = useCallback(
+    async (expression: string, reading: string, state: VocabState) => {
+      const entry = await window.electronAPI.vocab.setState({ expression, reading, state });
+      if (entry) mergeVocab([entry]);
+    },
+    [mergeVocab],
+  );
+
   /** Dismisses the dictionary popup and clears the matched-run highlight. */
   const clearLookup = useCallback(() => {
     if (clearTimerRef.current) {
       clearTimeout(clearTimerRef.current);
       clearTimerRef.current = 0;
+    }
+    if (dwellTimerRef.current) {
+      clearTimeout(dwellTimerRef.current); // left before the word counted as read
+      dwellTimerRef.current = 0;
     }
     popupHoveredRef.current = false;
     lookupAnchorRef.current = null;
@@ -140,6 +232,10 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
           if (!result || !result.matchedLength || (!result.entries.length && !result.kanji.length)) {
             setLookupHighlight(null);
             setLookup(null); // keep lastQueryRef so the same no-match run isn't re-queried
+            if (dwellTimerRef.current) {
+              clearTimeout(dwellTimerRef.current);
+              dwellTimerRef.current = 0;
+            }
             return;
           }
           if (clearTimerRef.current) {
@@ -153,10 +249,11 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
           lookupAnchorRef.current = anchor; // pin point for the frozen zone
           popupRectRef.current = null; // re-measured by the popup's onLayout
           setLookup({ result, anchor });
+          captureLookup(result);
         })
         .catch(() => {});
     },
-    [hostRef, modeRef, scheduleClear],
+    [hostRef, modeRef, scheduleClear, captureLookup],
   );
 
   // Pulls the shared card context (cloze/sentence) from the live match and, when a
@@ -215,6 +312,13 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
 
       try {
         const res = await window.electronAPI.anki.addNote({ server: cfg.server, apiKey: cfg.apiKey }, note, screenshot);
+        // Either outcome means a card exists, so the word is being learned.
+        if (res.ok || /duplicate/i.test(res.error)) {
+          window.electronAPI.vocab
+            .markMined(entry.expression, entry.reading ?? "")
+            .then((v) => v && mergeVocab([v]))
+            .catch(() => {});
+        }
         if (res.ok) {
           toast.success(`Added “${entry.expression}” to Anki.`);
           return "added";
@@ -229,7 +333,7 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
         if (useShot) setCapturing(false);
       }
     },
-    [book, buildContextAndShot],
+    [book, buildContextAndShot, mergeVocab],
   );
 
   // Mines a kanji from the popup's kanji card to its own note type (Yomitan keeps
@@ -343,10 +447,23 @@ export function useHoverDictionary({ hostRef, modeRef, book, enabled, modifier, 
     };
   }, [enabled, modifier, fixedLayout, runLookupAt, scheduleClear]);
 
+  // Buffered lookups must not die with the reader: flush on book change, on
+  // unmount, and on the way out of the app.
+  useEffect(() => {
+    window.addEventListener("beforeunload", flushLookups);
+    return () => {
+      window.removeEventListener("beforeunload", flushLookups);
+      if (dwellTimerRef.current) clearTimeout(dwellTimerRef.current);
+      flushLookups();
+    };
+  }, [flushLookups, book?.id]);
+
   return {
     lookup,
     capturing,
     clearLookup,
+    vocab,
+    setVocabState,
     mineEntry,
     mineKanji,
     onMouseMove,

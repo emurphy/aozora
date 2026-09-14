@@ -5,6 +5,7 @@ import { updateElectronApp } from "update-electron-app";
 import { registerWindowIpc } from "./main/window.js";
 import { registerLibraryIpc } from "./main/library.js";
 import { registerStatsIpc } from "./main/stats.js";
+import { registerVocabIpc } from "./main/vocab.js";
 import { registerDictionaryIpc } from "./main/dictionary.js";
 import { registerSystemIpc } from "./main/system.js";
 import { registerBackupIpc } from "./main/backup.js";
@@ -76,6 +77,7 @@ app.whenReady().then(() => {
   registerWindowIpc();
   registerLibraryIpc();
   registerStatsIpc();
+  registerVocabIpc();
   registerDictionaryIpc();
   registerSystemIpc();
   registerBackupIpc();

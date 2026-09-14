@@ -33,8 +33,11 @@ export function modifierHeld(modifier: LookupModifier, e: { shiftKey: boolean; a
 interface DictionaryState {
   enabled: boolean;
   modifier: LookupModifier;
+  /** Whether looked-up words are saved to the vocabulary list. */
+  trackVocabulary: boolean;
   setEnabled: (enabled: boolean) => void;
   setModifier: (modifier: LookupModifier) => void;
+  setTrackVocabulary: (trackVocabulary: boolean) => void;
 }
 
 export const useDictionaryStore = create<DictionaryState>()(
@@ -42,8 +45,10 @@ export const useDictionaryStore = create<DictionaryState>()(
     (set) => ({
       enabled: true,
       modifier: "shift",
+      trackVocabulary: true,
       setEnabled: (enabled) => set({ enabled }),
       setModifier: (modifier) => set({ modifier }),
+      setTrackVocabulary: (trackVocabulary) => set({ trackVocabulary }),
     }),
     {
       name: "aozora-dictionary",

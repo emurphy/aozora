@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, BookCheck, CalendarDays, Clock, Flame, Gauge, Loader2, Type } from "lucide-react";
+import { BarChart3, BookCheck, CalendarDays, Clock, Flame, Gauge, Languages, Loader2, Search, Type } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +11,7 @@ import { useStatsPrefs } from "@/stores/stats-prefs-store";
 import { readingStatus } from "@/lib/format";
 import { toDayKey, shiftDay, computeStreaks, formatDuration, formatCompact } from "@/lib/stats/aggregate";
 import type { DayValue } from "@/lib/stats/aggregate";
-import type { Stats } from "@/lib/types";
+import type { Stats, VocabStats } from "@/lib/types";
 import { Heatmap, HeatmapLegend } from "./heatmap";
 import { StatCard, BarChart } from "./stats-widgets";
 import { GoalCard } from "./goal-card";
@@ -30,6 +30,7 @@ export function StatsView() {
   const dailyGoal = useStatsPrefs((s) => s.dailyGoal);
   const setDailyGoal = useStatsPrefs((s) => s.setDailyGoal);
   const [data, setData] = useState<Stats | null>(null);
+  const [vocab, setVocab] = useState<VocabStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState("chars"); // chars | minutes
   const [year, setYear] = useState(() => new Date().getFullYear());
@@ -46,6 +47,12 @@ export function StatsView() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    window.electronAPI.vocab
+      .stats()
+      .then((v) => {
+        if (!cancelled) setVocab(v);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -118,6 +125,24 @@ export function StatsView() {
   );
 
   const booksFinished = useMemo(() => books.filter((b) => readingStatus(b) === "finished").length, [books]);
+
+  // Vocabulary: words first met per day over the same 30-day window as the
+  // reading trend, plus how often a lookup was needed per 1000 characters read.
+  const wordsByDay = useMemo(() => new Map((vocab?.daily ?? []).map((d) => [d.day, d.words])), [vocab]);
+  const wordsTrend = useMemo(() => {
+    const arr = [];
+    for (let i = 29; i >= 0; i -= 1) {
+      const key = shiftDay(todayKey, -i);
+      const value = wordsByDay.get(key) || 0;
+      arr.push({ key, value, tip: `${key} · ${value} new word${value === 1 ? "" : "s"}` });
+    }
+    return arr;
+  }, [wordsByDay, todayKey]);
+  const newWordsThisWeek = useMemo(
+    () => wordsTrend.slice(-7).reduce((sum, day) => sum + day.value, 0),
+    [wordsTrend],
+  );
+  const lookupsPerThousand = overview.totalChars > 0 ? ((vocab?.lookupCount ?? 0) / overview.totalChars) * 1000 : 0;
 
   const speedCpm = overview.totalMs > 0 ? Math.round(overview.totalChars / (overview.totalMs / 60000)) : 0;
   const hasData = overview.sessionCount > 0;
@@ -251,6 +276,33 @@ export function StatsView() {
                 </div>
               </Card>
             </section>
+
+            {/* Vocabulary: the words looked up while reading (curated on the Words page). */}
+            {vocab && vocab.total > 0 && (
+              <section className="grid gap-3 lg:grid-cols-3">
+                <Card size="sm" className="gap-3 lg:col-span-2">
+                  <div className="px-3 pt-1">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">New words, last 30 days</h3>
+                  </div>
+                  <div className="px-3 pb-2">
+                    <BarChart bars={wordsTrend} />
+                    <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+                      <span>{wordsTrend[0]?.key.slice(5)}</span>
+                      <span>Today</span>
+                    </div>
+                  </div>
+                </Card>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+                  <StatCard icon={Languages} label="New this week" value={newWordsThisWeek} sub={`${vocab.total} words all time`} />
+                  <StatCard
+                    icon={Search}
+                    label="Lookup rate"
+                    value={lookupsPerThousand ? lookupsPerThousand.toFixed(1) : "0"}
+                    sub="lookups / 1k chars"
+                  />
+                </div>
+              </section>
+            )}
 
             <Milestones
               totalChars={overview.totalChars}

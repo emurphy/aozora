@@ -192,9 +192,9 @@ export const registerBackupIpc = (): void => {
       fs.rmSync(`${live}-wal`, { force: true });
       fs.rmSync(`${live}-shm`, { force: true });
 
-      // An older backup can lack columns this build reads, and this DB has no
-      // migration path, so put the user's own data back rather than leave them a
-      // library that throws on every query.
+      // Reopening migrates an older backup forward, but one written by a newer
+      // build can still lack columns this one reads: put the user's own data back
+      // rather than leave them a library that throws on every query.
       const schemaError = libraryStore.schemaError();
       if (schemaError) {
         libraryStore.close();

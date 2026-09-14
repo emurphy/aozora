@@ -493,6 +493,88 @@ export interface VoicevoxTimings {
 /** Result of a synthesis request: the WAV bytes + mora timeline, or an error. */
 export type VoicevoxSynthesisResult = { ok: true; audio: Uint8Array; timings: VoicevoxTimings } | { ok: false; error: string };
 
+/* ── Vocabulary (words looked up in the reader) ─────────────────────────── */
+//
+// Two tables in the library DB, shaped like reading_sessions: `vocab` is the
+// aggregate (one row per word), `vocab_lookups` the occurrence log (where and
+// in which sentence each lookup happened).
+
+/** Where a word stands. Every word starts `new` on its first lookup. */
+export type VocabState = "new" | "learning" | "known" | "ignored";
+
+export const VOCAB_STATES: VocabState[] = ["new", "learning", "known", "ignored"];
+
+/** A word plus a summary of its most recent occurrence. */
+export interface VocabEntry {
+  id: string;
+  /** Dictionary form as the popup showed it. */
+  expression: string;
+  /** Kana reading, empty for a kana-only headword. Identity is expression + reading. */
+  reading: string;
+  state: VocabState;
+  lookupCount: number;
+  firstAt: number;
+  lastAt: number;
+  /** When a card was mined to Anki, else null. */
+  minedAt: number | null;
+  lastBookId: string | null;
+  /** Null once that book is removed from the library. */
+  lastBookTitle: string | null;
+  lastSentence: string | null;
+}
+
+/** One recorded sighting of a word. */
+export interface VocabOccurrence {
+  id: string;
+  bookId: string | null;
+  bookTitle: string | null;
+  charOffset: number | null;
+  /** The inflected form actually on the page (食べさせられた for 食べる). */
+  surface: string | null;
+  sentence: string | null;
+  createdAt: number;
+}
+
+/** One captured lookup, sent from the reader in batches. */
+export interface VocabLookupInput {
+  expression: string;
+  reading: string;
+  bookId: string | null;
+  charOffset: number | null;
+  surface: string | null;
+  sentence: string | null;
+  at: number;
+}
+
+export interface VocabFilter {
+  state?: VocabState | "all";
+  /** Only words met in this book. */
+  bookId?: string | null;
+  /** Substring of the expression or reading. */
+  search?: string;
+  limit?: number;
+}
+
+export interface SetVocabStatePayload {
+  expression: string;
+  reading: string;
+  state: VocabState;
+}
+
+export interface VocabStats {
+  /** Distinct words, and how many lookups they account for. */
+  total: number;
+  lookupCount: number;
+  byState: Record<VocabState, number>;
+  minedCount: number;
+  /** Words met for the first time today (local calendar day). */
+  newToday: number;
+  /** Per local day, oldest first: words first met, lookups made. */
+  daily: { day: string; words: number; lookups: number }[];
+}
+
+export type VocabExportResult = { ok: true; path: string } | { ok: false; error: string } | { ok: false; canceled: true };
+
 /* ── Backup / restore ───────────────────────────────────────────────────── */
 
 /** First entry in a backup archive: format + what's inside. */

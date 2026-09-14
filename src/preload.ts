@@ -2,6 +2,7 @@ import { contextBridge } from "electron";
 import { windowApi } from "./preload/window.js";
 import { libraryApi } from "./preload/library.js";
 import { statsApi } from "./preload/stats.js";
+import { vocabApi } from "./preload/vocab.js";
 import { dictionaryApi } from "./preload/dictionary.js";
 import { systemApi } from "./preload/system.js";
 import { discordApi } from "./preload/discord.js";
@@ -13,6 +14,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   window: windowApi,
   library: libraryApi,
   stats: statsApi,
+  vocab: vocabApi,
   dictionary: dictionaryApi,
   system: systemApi,
   discord: discordApi,

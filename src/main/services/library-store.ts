@@ -1,8 +1,26 @@
 import { app } from "electron";
 import path from "node:path";
 import fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import type { Book, Bookmark, Annotation, ProgressUpdate, StatsOverview, DailyActivity, HourlyActivity, PerBookStats } from "@/lib/types";
+import { runMigrations, libraryMigrations } from "./migrations/index.js";
+import { toDayKey } from "@/lib/stats/aggregate";
+import type {
+  Book,
+  Bookmark,
+  Annotation,
+  ProgressUpdate,
+  StatsOverview,
+  DailyActivity,
+  HourlyActivity,
+  PerBookStats,
+  VocabEntry,
+  VocabFilter,
+  VocabLookupInput,
+  VocabOccurrence,
+  VocabState,
+  VocabStats,
+} from "@/lib/types";
 
 /**
  * SQLite-backed library store: source of truth for book metadata and reading
@@ -115,7 +133,39 @@ function getDb(): Database.Database {
       chars_read  INTEGER NOT NULL DEFAULT 0   -- 0 for fixed-layout (manga) sessions
     );
     CREATE INDEX IF NOT EXISTS idx_sessions_started ON reading_sessions(started_at);
+
+    -- One row per word looked up in the reader. Identity is expression+reading,
+    -- so homographs (生, 開く) stay separate entries. reading is '' rather than
+    -- NULL for a kana-only headword: SQLite treats NULLs as distinct, which
+    -- would let the UNIQUE pair admit duplicates.
+    CREATE TABLE IF NOT EXISTS vocab (
+      id           TEXT PRIMARY KEY,
+      expression   TEXT NOT NULL,
+      reading      TEXT NOT NULL DEFAULT '',
+      state        TEXT NOT NULL DEFAULT 'new',  -- new | learning | known | ignored
+      lookup_count INTEGER NOT NULL DEFAULT 0,
+      first_at     INTEGER NOT NULL,
+      last_at      INTEGER NOT NULL,
+      mined_at     INTEGER,                      -- when an Anki card was made, else NULL
+      UNIQUE(expression, reading)
+    );
+
+    -- Where each lookup happened. Kept apart from vocab so the word survives the
+    -- book (SET NULL, like reading_sessions) and so "met 4 times" can be listed.
+    CREATE TABLE IF NOT EXISTS vocab_lookups (
+      id          TEXT PRIMARY KEY,
+      vocab_id    TEXT NOT NULL REFERENCES vocab(id) ON DELETE CASCADE,
+      book_id     TEXT REFERENCES books(id) ON DELETE SET NULL,
+      char_offset INTEGER,
+      surface     TEXT,   -- the inflected form on the page
+      sentence    TEXT,
+      created_at  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_vocab_lookups_vocab ON vocab_lookups(vocab_id);
+    CREATE INDEX IF NOT EXISTS idx_vocab_lookups_created ON vocab_lookups(created_at);
   `);
+
+  runMigrations(db, libraryMigrations);
 
   return db;
 }
@@ -158,8 +208,49 @@ interface AnnotationRow {
   created_at: number;
 }
 
+/** A vocab row joined to its most recent lookup (see listVocab). */
+interface VocabRow {
+  id: string;
+  expression: string;
+  reading: string;
+  state: string;
+  lookup_count: number;
+  first_at: number;
+  last_at: number;
+  mined_at: number | null;
+  last_book_id: string | null;
+  last_book_title: string | null;
+  last_sentence: string | null;
+}
+
+interface VocabOccurrenceRow {
+  id: string;
+  book_id: string | null;
+  book_title: string | null;
+  char_offset: number | null;
+  surface: string | null;
+  sentence: string | null;
+  created_at: number;
+}
+
 /** Named-parameter bag for prepared statements. */
 type SqlParams = Record<string, string | number | null>;
+
+/**
+ * Every vocab read goes through this: the word joined to its newest occurrence,
+ * so a list row can show where it was last met without a second query. Callers
+ * append their own WHERE / ORDER BY.
+ */
+const VOCAB_SELECT = `
+  SELECT v.id, v.expression, v.reading, v.state, v.lookup_count, v.first_at, v.last_at, v.mined_at,
+         l.book_id  AS last_book_id,
+         l.sentence AS last_sentence,
+         b.title    AS last_book_title
+    FROM vocab v
+    LEFT JOIN vocab_lookups l ON l.id = (
+      SELECT id FROM vocab_lookups WHERE vocab_id = v.id ORDER BY created_at DESC, rowid DESC LIMIT 1
+    )
+    LEFT JOIN books b ON b.id = l.book_id`;
 
 /** Maps a DB row (snake_case) to the camelCase shape the renderer consumes. */
 function rowToBook(row: BookRow | undefined): Book | null {
@@ -207,6 +298,24 @@ function rowToAnnotation(row: AnnotationRow | undefined): Annotation | null {
     snippet: row.snippet ?? null,
     progress: row.progress,
     createdAt: row.created_at,
+  };
+}
+
+/** Maps a vocab row (joined to its latest lookup) to the renderer's shape. */
+function rowToVocab(row: VocabRow | undefined): VocabEntry | null {
+  if (!row) return null;
+  return {
+    id: row.id,
+    expression: row.expression,
+    reading: row.reading,
+    state: row.state as VocabState,
+    lookupCount: row.lookup_count,
+    firstAt: row.first_at,
+    lastAt: row.last_at,
+    minedAt: row.mined_at ?? null,
+    lastBookId: row.last_book_id ?? null,
+    lastBookTitle: row.last_book_title ?? null,
+    lastSentence: row.last_sentence ?? null,
   };
 }
 
@@ -273,9 +382,10 @@ export const libraryStore = {
   },
 
   /**
-   * Reports a missing column this build reads, or null. Restores need it: unlike
-   * the dictionary DB, this one has no migration runner: the schema block heals
-   * a missing *table* but never a missing *column*.
+   * Reports a missing column this build reads, or null. Restores need it: an
+   * older DB is carried forward by the migrations, but a backup written by a
+   * NEWER build can hold a shape this one never learned, and migrations only
+   * run forwards.
    */
   schemaError(): string | null {
     const canaries: Record<string, string> = {
@@ -283,6 +393,8 @@ export const libraryStore = {
       bookmarks: "id, book_id, char_offset, progress, snippet, created_at",
       annotations: "id, book_id, start_char, end_char, color, note, snippet, progress, created_at",
       reading_sessions: "id, book_id, started_at, ended_at, duration_ms, chars_read",
+      vocab: "id, expression, reading, state, lookup_count, first_at, last_at, mined_at",
+      vocab_lookups: "id, vocab_id, book_id, char_offset, surface, sentence, created_at",
     };
     for (const [table, columns] of Object.entries(canaries)) {
       try {
@@ -522,5 +634,206 @@ export const libraryStore = {
           GROUP BY s.book_id
           ORDER BY ms DESC`,
     ).all() as PerBookStats[];
+  },
+
+  // --- Vocabulary (words looked up in the reader). --------------------------
+
+  /**
+   * Upserts a batch of lookups: each word's counter is bumped and the occurrence
+   * logged. One transaction because the reader flushes a whole reading run at
+   * once. Returns the touched words so the popup can show their state.
+   */
+  recordLookups(items: VocabLookupInput[]): VocabEntry[] {
+    if (!items.length) return [];
+    const touched = new Set<string>();
+
+    const apply = getDb().transaction((batch: VocabLookupInput[]) => {
+      for (const item of batch) {
+        const expression = item.expression.trim();
+        if (!expression) continue;
+        const reading = (item.reading || "").trim();
+        const at = item.at || Date.now();
+
+        // The id only matters when the row is new, so it is minted here rather
+        // than by the IPC layer: the caller can't know which branch will run.
+        stmt(
+          `INSERT INTO vocab (id, expression, reading, state, lookup_count, first_at, last_at)
+                VALUES (@id, @expression, @reading, 'new', 1, @at, @at)
+           ON CONFLICT(expression, reading) DO UPDATE SET
+                lookup_count = vocab.lookup_count + 1,
+                last_at      = MAX(vocab.last_at, excluded.last_at)`,
+        ).run({ id: randomUUID(), expression, reading, at });
+
+        const id = stmt("SELECT id FROM vocab WHERE expression = @expression AND reading = @reading").get({ expression, reading }) as
+          | { id: string }
+          | undefined;
+        if (!id) continue;
+        touched.add(id.id);
+
+        stmt(
+          `INSERT INTO vocab_lookups (id, vocab_id, book_id, char_offset, surface, sentence, created_at)
+                VALUES (@id, @vocabId, @bookId, @charOffset, @surface, @sentence, @at)`,
+        ).run({
+          id: randomUUID(),
+          vocabId: id.id,
+          bookId: item.bookId ?? null,
+          charOffset: item.charOffset ?? null,
+          surface: item.surface ?? null,
+          sentence: item.sentence ?? null,
+          at,
+        });
+      }
+    });
+    apply(items);
+
+    return [...touched].flatMap((id) => {
+      const row = stmt(`${VOCAB_SELECT} WHERE v.id = @id`).get({ id }) as VocabRow | undefined;
+      const entry = rowToVocab(row);
+      return entry ? [entry] : [];
+    });
+  },
+
+  getVocab(expression: string, reading: string): VocabEntry | null {
+    const row = stmt(`${VOCAB_SELECT} WHERE v.expression = @expression AND v.reading = @reading`).get({ expression, reading }) as
+      | VocabRow
+      | undefined;
+    return rowToVocab(row);
+  },
+
+  /** The known words among these, for the popup (one lookup can show several senses). */
+  getVocabMany(words: { expression: string; reading: string }[]): VocabEntry[] {
+    return words.flatMap((word) => {
+      const entry = this.getVocab(word.expression, word.reading ?? "");
+      return entry ? [entry] : [];
+    });
+  },
+
+  /**
+   * Words matching the filter, most recently met first. Upserting on state means
+   * a word can be marked known from the popup before it has ever been recorded
+   * (clicking a sense other than the one auto-captured).
+   */
+  listVocab({ state, bookId, search, limit }: VocabFilter): VocabEntry[] {
+    const where: string[] = [];
+    const params: SqlParams = { limit: Math.min(Math.max(limit ?? 1000, 1), 5000) };
+    if (state && state !== "all") {
+      where.push("v.state = @state");
+      params.state = state;
+    }
+    if (bookId) {
+      where.push("EXISTS (SELECT 1 FROM vocab_lookups x WHERE x.vocab_id = v.id AND x.book_id = @bookId)");
+      params.bookId = bookId;
+    }
+    const q = search?.trim();
+    if (q) {
+      where.push("(v.expression LIKE @q OR v.reading LIKE @q)");
+      params.q = `%${q}%`;
+    }
+    const sql = `${VOCAB_SELECT}
+        ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+        ORDER BY v.last_at DESC
+        LIMIT @limit`;
+    const rows = stmt(sql).all(params) as VocabRow[];
+    return rows.map(rowToVocab) as VocabEntry[];
+  },
+
+  /** Every recorded sighting of one word, most recent first. */
+  listVocabOccurrences(vocabId: string): VocabOccurrence[] {
+    const rows = stmt(
+      `SELECT l.id, l.book_id, l.char_offset, l.surface, l.sentence, l.created_at, b.title AS book_title
+           FROM vocab_lookups l
+           LEFT JOIN books b ON b.id = l.book_id
+          WHERE l.vocab_id = @vocabId
+          ORDER BY l.created_at DESC`,
+    ).all({ vocabId }) as VocabOccurrenceRow[];
+    return rows.map((row) => ({
+      id: row.id,
+      bookId: row.book_id ?? null,
+      bookTitle: row.book_title ?? null,
+      charOffset: row.char_offset ?? null,
+      surface: row.surface ?? null,
+      sentence: row.sentence ?? null,
+      createdAt: row.created_at,
+    }));
+  },
+
+  /** Sets a word's state, creating the row when the word was never captured. */
+  setVocabState(expression: string, reading: string, state: VocabState, now: number): VocabEntry | null {
+    stmt(
+      `INSERT INTO vocab (id, expression, reading, state, lookup_count, first_at, last_at)
+            VALUES (@id, @expression, @reading, @state, 0, @now, @now)
+       ON CONFLICT(expression, reading) DO UPDATE SET state = excluded.state`,
+    ).run({ id: randomUUID(), expression, reading, state, now });
+    return this.getVocab(expression, reading);
+  },
+
+  /** Bulk state change from the vocabulary page. Returns how many rows moved. */
+  setVocabStateByIds(ids: string[], state: VocabState): number {
+    if (!ids.length) return 0;
+    const update = stmt("UPDATE vocab SET state = @state WHERE id = @id");
+    const apply = getDb().transaction((batch: string[]) => {
+      for (const id of batch) update.run({ id, state });
+    });
+    apply(ids);
+    return ids.length;
+  },
+
+  /** Flags a word as mined to Anki; an untouched word also graduates to learning. */
+  markVocabMined(expression: string, reading: string, now: number): VocabEntry | null {
+    stmt(
+      `INSERT INTO vocab (id, expression, reading, state, lookup_count, first_at, last_at, mined_at)
+            VALUES (@id, @expression, @reading, 'learning', 0, @now, @now, @now)
+       ON CONFLICT(expression, reading) DO UPDATE SET
+            mined_at = @now,
+            state    = CASE WHEN vocab.state = 'new' THEN 'learning' ELSE vocab.state END`,
+    ).run({ id: randomUUID(), expression, reading, now });
+    return this.getVocab(expression, reading);
+  },
+
+  removeVocab(id: string): void {
+    stmt("DELETE FROM vocab WHERE id = ?").run(id);
+  },
+
+  /** Totals and per-day series behind the vocabulary widgets on the stats page. */
+  getVocabStats(): VocabStats {
+    const totals = stmt(
+      `SELECT COUNT(*)                              AS total,
+              COALESCE(SUM(lookup_count), 0)        AS lookupCount,
+              COALESCE(SUM(mined_at IS NOT NULL), 0) AS minedCount
+         FROM vocab`,
+    ).get() as { total: number; lookupCount: number; minedCount: number };
+
+    const byState: Record<VocabState, number> = { new: 0, learning: 0, known: 0, ignored: 0 };
+    for (const row of stmt("SELECT state, COUNT(*) AS n FROM vocab GROUP BY state").all() as { state: VocabState; n: number }[]) {
+      if (row.state in byState) byState[row.state] = row.n;
+    }
+
+    // Two series keyed by local day: words first met, and lookups made.
+    const merged = new Map<string, { day: string; words: number; lookups: number }>();
+    const bump = (day: string, key: "words" | "lookups", n: number) => {
+      const row = merged.get(day) ?? { day, words: 0, lookups: 0 };
+      row[key] = n;
+      merged.set(day, row);
+    };
+    for (const row of stmt(
+      `SELECT date(first_at / 1000, 'unixepoch', 'localtime') AS day, COUNT(*) AS n FROM vocab GROUP BY day`,
+    ).all() as { day: string; n: number }[]) {
+      bump(row.day, "words", row.n);
+    }
+    for (const row of stmt(
+      `SELECT date(created_at / 1000, 'unixepoch', 'localtime') AS day, COUNT(*) AS n FROM vocab_lookups GROUP BY day`,
+    ).all() as { day: string; n: number }[]) {
+      bump(row.day, "lookups", row.n);
+    }
+    const daily = [...merged.values()].sort((a, b) => a.day.localeCompare(b.day));
+
+    return {
+      total: totals.total,
+      lookupCount: totals.lookupCount,
+      byState,
+      minedCount: totals.minedCount,
+      newToday: merged.get(toDayKey(new Date()))?.words ?? 0,
+      daily,
+    };
   },
 };

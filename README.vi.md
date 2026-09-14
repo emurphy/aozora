@@ -11,7 +11,7 @@
 
 ## Giới thiệu
 
-**Aozora 青空** là trình đọc EPUB dành cho người học tiếng Nhật, được xây dựng chủ yếu để đọc light novel và manga, tích hợp sẵn các tính năng như **[từ điển Yomitan](#từ-điển)**, **[tạo flashcard cho Anki](#anki)**, **[giọng đọc waifu (TTS)](#voice-waifu-tts)** kèm highlight kiểu karaoke, tìm kiếm toàn văn, các thống kê đọc sách và rất nhiều tính năng khác.
+**Aozora 青空** là trình đọc EPUB dành cho người học tiếng Nhật, được xây dựng chủ yếu để đọc light novel và manga, tích hợp sẵn các tính năng như **[từ điển Yomitan](#từ-điển)**, **[tạo flashcard cho Anki](#anki)**, **[giọng đọc waifu (TTS)](#voice-waifu-tts)** kèm highlight kiểu karaoke, tìm kiếm toàn văn, theo dõi từ vựng, các thống kê đọc sách và rất nhiều tính năng khác.
 
 > **Được xây dựng riêng cho EPUB tiếng Nhật.** Trình đọc được tinh chỉnh theo các quy ước của những EPUB này, các EPUB khác vẫn có thể mở và đọc bình thường nhưng có thể sẽ không hoạt động chính xác hay có đầy đủ tính năng như tiếng Nhật.
 
@@ -29,6 +29,7 @@
 - **Tìm kiếm toàn văn**: Tra cứu nhanh bất kỳ từ khóa nào trong cuốn sách đang đọc.
 - [**Từ điển tra nhanh**](#từ-điển): Rê chuột và giữ phím kích hoạt (mặc định là **Shift**) để bật bảng tra từ kiểu Yomitan. Hiển thị đầy đủ Furigana, bảng nghĩa có cấu trúc (số thứ tự, bảng biểu, hình ảnh), mức độ phổ biến, câu ví dụ, đồ thị trọng âm (pitch-accent) và phân tích Kanji.
 - **Thư viện minh họa**: Xem toàn bộ hình ảnh trong sách ở chế độ toàn màn hình, hỗ trợ bấm vào ảnh để nhảy ngay đến vị trí trang tương ứng và tiếp tục đọc.
+- **Theo dõi từ vựng**: Mọi từ bạn tra đều được lưu lại kèm câu chứa từ và cuốn sách đã gặp. Trang **Words** liệt kê chúng cùng số lần gặp, cho phép đánh dấu **learning / known / ignored**, tạo hàng loạt thẻ Anki, xuất ra CSV/TSV và nhảy thẳng về đúng đoạn văn đã gặp từ đó.
 - **Thống kê tiến trình đọc**: Tự động ghi lại thời gian đọc và tổng hợp thành bảng thống kê trực quan, bao gồm bản đồ nhiệt (kiểu GitHub), chuỗi ngày đọc (streak), mục tiêu hằng ngày, các cột mốc đạt được và tổng thời gian đọc cho từng cuốn sách.
 - **Chế độ đọc toàn màn hình**: Loại bỏ mọi xao nhãng chỉ với một cú nhấp vào nút trên thanh công cụ hoặc bấm phím **F11**.
 - [**Tạo thẻ ghi nhớ Anki**](#anki): Tạo thẻ Anki tức thì ngay từ bảng tra từ điển thông qua **AnkiConnect**. Tự động gán các thông tin như từ vựng, cách đọc, định nghĩa, câu chứa từ và ảnh chụp đoạn văn vào đúng các trường trong ghi chú của bạn.

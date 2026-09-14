@@ -19,9 +19,17 @@ import type {
   ProgressUpdate,
   ReadingSession,
   RestoreResult,
+  SetVocabStatePayload,
   Stats,
   UpdateAnnotationPayload,
   UpdateBookPayload,
+  VocabEntry,
+  VocabExportResult,
+  VocabFilter,
+  VocabLookupInput,
+  VocabOccurrence,
+  VocabState,
+  VocabStats,
   VoicevoxSpeakerDetail,
   VoicevoxSynthesisResult,
   VoicevoxTestResult,
@@ -68,6 +76,19 @@ export interface LibraryApi {
 export interface StatsApi {
   recordSession(session: ReadingSession): Promise<boolean>;
   get(): Promise<Stats>;
+}
+
+export interface VocabApi {
+  record(items: VocabLookupInput[]): Promise<VocabEntry[]>;
+  getMany(words: { expression: string; reading: string }[]): Promise<VocabEntry[]>;
+  list(filter: VocabFilter): Promise<VocabEntry[]>;
+  occurrences(vocabId: string): Promise<VocabOccurrence[]>;
+  setState(payload: SetVocabStatePayload): Promise<VocabEntry | null>;
+  setStateMany(ids: string[], state: VocabState): Promise<number>;
+  markMined(expression: string, reading: string): Promise<VocabEntry | null>;
+  remove(id: string): Promise<boolean>;
+  stats(): Promise<VocabStats>;
+  exportFile(suggestedName: string, contents: string): Promise<VocabExportResult>;
 }
 
 export interface DictionaryApi {
@@ -123,6 +144,7 @@ export interface ElectronAPI {
   window: WindowApi;
   library: LibraryApi;
   stats: StatsApi;
+  vocab: VocabApi;
   dictionary: DictionaryApi;
   system: SystemApi;
   discord: DiscordApi;

@@ -117,8 +117,10 @@ function SortableDictRow({
 export function DictionariesView() {
   const enabled = useDictionaryStore((s) => s.enabled);
   const modifier = useDictionaryStore((s) => s.modifier);
+  const trackVocabulary = useDictionaryStore((s) => s.trackVocabulary);
   const setEnabled = useDictionaryStore((s) => s.setEnabled);
   const setModifier = useDictionaryStore((s) => s.setModifier);
+  const setTrackVocabulary = useDictionaryStore((s) => s.setTrackVocabulary);
 
   const [dicts, setDicts] = useState<DictionaryInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -256,6 +258,18 @@ export function DictionariesView() {
                 <p className="text-[11px] text-muted-foreground">Show a definition popup for the word under the cursor.</p>
               </div>
               <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Enable hover lookup" />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium">Save looked-up words</p>
+                <p className="text-[11px] text-muted-foreground">Keep every word you look up, with its sentence, on the Words page.</p>
+              </div>
+              <Switch
+                checked={trackVocabulary}
+                onCheckedChange={setTrackVocabulary}
+                disabled={!enabled}
+                aria-label="Save looked-up words"
+              />
             </div>
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
