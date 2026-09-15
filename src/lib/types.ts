@@ -59,6 +59,39 @@ export interface PickedFile {
   size: number;
 }
 
+/** Extensions the importer accepts. */
+export const BOOK_EXTENSIONS: string[] = ["epub", "cbz", "zip"];
+
+export function isBookFileName(name: string): boolean {
+  return BOOK_EXTENSIONS.includes(name.split(".").pop()?.toLowerCase() ?? "");
+}
+
+/** "epub" (EPUB) or "cbz" (comic archive: a bare zip of page images). */
+export type BookFormat = "epub" | "cbz";
+
+/**
+ * How a file is read, decided by its extension alone: `.epub` is an EPUB, `.cbz`
+ * and `.zip` are comic archives. No content sniffing, so a mislabelled file
+ * fails with the error its extension implies instead of opening as the other
+ * format.
+ */
+export function bookFormat(nameOrPath: string): BookFormat {
+  return nameOrPath.toLowerCase().endsWith(".epub") ? "epub" : "cbz";
+}
+
+/**
+ * Filename an import is stored under in its library folder. Carries the format,
+ * so the reader and backup/relocation need no DB column to know it.
+ */
+export function storedBookName(sourcePath: string): string {
+  return `book.${bookFormat(sourcePath)}`;
+}
+
+/** Whether a file in a book folder is the imported original. */
+export function isStoredBookName(name: string): boolean {
+  return name === "book.epub" || name === "book.cbz";
+}
+
 // --- IPC payloads. ----------------------------------------------------------
 
 export interface AddBookPayload {

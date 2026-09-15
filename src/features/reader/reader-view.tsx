@@ -408,7 +408,7 @@ export function ReaderView() {
         let parsed = await getCachedBook(book.id);
         if (!parsed) {
           const bytes = await api().readBook(book.id);
-          parsed = await parseBook(new Blob([bytes as BlobPart]));
+          parsed = await parseBook(new Blob([bytes as BlobPart]), book.filePath);
           await putCachedBook(book.id, parsed);
         }
         if (cancelled) return;

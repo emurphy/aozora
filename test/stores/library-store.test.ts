@@ -4,18 +4,18 @@ import type { Book } from "@/lib/types";
 
 // The store extracts metadata in the renderer and clears the IndexedDB cache on
 // remove; both are external to the store's own logic, so mock them.
-vi.mock("@/lib/epub/metadata", () => ({ extractEpubMetadata: vi.fn() }));
+vi.mock("@/lib/archive", () => ({ extractArchiveMetadata: vi.fn() }));
 vi.mock("@/lib/reader-cache", () => ({ deleteCachedBook: vi.fn(() => Promise.resolve()) }));
 
 import { useLibraryStore } from "@/stores/library-store";
-import { extractEpubMetadata } from "@/lib/epub/metadata";
+import { extractArchiveMetadata } from "@/lib/archive";
 import { deleteCachedBook } from "@/lib/reader-cache";
 
 let api: Record<string, Mock>;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(extractEpubMetadata).mockResolvedValue({
+  vi.mocked(extractArchiveMetadata).mockResolvedValue({
     title: "T",
     author: "A",
     language: "ja",
@@ -88,7 +88,7 @@ describe("importBooks (native picker)", () => {
       { path: "/bad.epub", name: "bad.epub", size: 1 },
       { path: "/ok.epub", name: "ok.epub", size: 2 },
     ]);
-    vi.mocked(extractEpubMetadata)
+    vi.mocked(extractArchiveMetadata)
       .mockRejectedValueOnce(new Error("corrupt"))
       .mockResolvedValueOnce({ title: "ok", author: "", language: "ja", coverBytes: null, coverMime: null });
     const res = await useLibraryStore.getState().importBooks();
@@ -99,19 +99,21 @@ describe("importBooks (native picker)", () => {
 });
 
 describe("importDroppedFiles", () => {
-  it("keeps only .epub files (case-insensitive) and resolves their paths", async () => {
+  it("keeps only book archives (case-insensitive) and resolves their paths", async () => {
     const fileList = [
       { name: "novel.EPUB", size: 10 },
       { name: "notes.txt", size: 5 },
       { name: "vol2.epub", size: 20 },
+      { name: "manga.cbz", size: 30 },
+      { name: "scans.zip", size: 40 },
     ];
     const res = await useLibraryStore.getState().importDroppedFiles(fileList as unknown as FileList);
-    expect(api.getPathForFile).toHaveBeenCalledTimes(2);
-    expect(api.addBook).toHaveBeenCalledTimes(2);
-    expect(res.added).toBe(2);
+    expect(api.getPathForFile).toHaveBeenCalledTimes(4);
+    expect(api.addBook).toHaveBeenCalledTimes(4);
+    expect(res.added).toBe(4);
   });
 
-  it("returns an empty summary when nothing is an epub", async () => {
+  it("returns an empty summary when nothing is a book archive", async () => {
     const res = await useLibraryStore.getState().importDroppedFiles([{ name: "a.pdf", size: 1 }] as unknown as FileList);
     expect(res).toEqual({ added: 0, duplicate: 0, failed: [] });
     expect(api.addBook).not.toHaveBeenCalled();

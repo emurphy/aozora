@@ -13,7 +13,7 @@ import { useReaderStore } from "@/stores/reader-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useLibraryPrefs, SORT_OPTIONS, type SortKey, type ViewMode, type CardSize } from "@/stores/library-prefs-store";
 import { readingStatus } from "@/lib/format";
-import type { Book } from "@/lib/types";
+import { isBookFileName, type Book } from "@/lib/types";
 
 const STATUS_TABS = [
   { value: "all", label: "All" },
@@ -185,8 +185,8 @@ export function LibraryView() {
     setDragging(false);
     const files = e.dataTransfer.files;
     if (!files?.length) return;
-    if (!Array.from(files).some((f) => f.name.toLowerCase().endsWith(".epub"))) {
-      toast.error("Only EPUB files can be imported");
+    if (!Array.from(files).some((f) => isBookFileName(f.name))) {
+      toast.error("Only EPUB and CBZ files can be imported");
       return;
     }
     try {
@@ -196,7 +196,7 @@ export function LibraryView() {
     }
   };
 
-  const importLabel = importing ? importingLabel(importProgress) : "Import EPUB";
+  const importLabel = importing ? importingLabel(importProgress) : "Import books";
 
   const importButton = (
     <Button onClick={handleImport} disabled={importing}>
@@ -229,7 +229,7 @@ export function LibraryView() {
       {dragging && (
         <div className="pointer-events-none absolute inset-3 z-50 flex flex-col items-center justify-center gap-3 rounded-none border-2 border-dashed border-primary bg-background/85 backdrop-blur-sm">
           <UploadCloud className="size-10 text-primary" strokeWidth={1.5} />
-          <p className="text-sm font-medium">Drop EPUB files to import</p>
+          <p className="text-sm font-medium">Drop EPUB or CBZ files to import</p>
         </div>
       )}
 
@@ -294,7 +294,7 @@ export function LibraryView() {
               <UploadCloud className="size-10 text-muted-foreground" strokeWidth={1.5} />
               <div className="space-y-1">
                 <p className="text-sm font-medium">Your library is empty</p>
-                <p className="text-xs text-muted-foreground">Drag &amp; drop EPUB files here, or import them manually.</p>
+                <p className="text-xs text-muted-foreground">Drag &amp; drop EPUB or CBZ files here, or import them manually.</p>
               </div>
               {importButton}
             </div>

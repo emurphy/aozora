@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { extractEpubMetadata } from "@/lib/epub/metadata";
+import { extractArchiveMetadata } from "@/lib/archive";
 import { deleteCachedBook } from "@/lib/reader-cache";
-import type { Book, PickedFile, ProgressUpdate, UpdateBookPayload } from "@/lib/types";
+import { isBookFileName, type Book, type PickedFile, type ProgressUpdate, type UpdateBookPayload } from "@/lib/types";
 
 const api = () => window.electronAPI.library;
 
@@ -50,7 +50,7 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
       try {
         const bytes = await api().readFile(file.path);
         const blob = new Blob([bytes as BlobPart]);
-        const meta = await extractEpubMetadata(blob);
+        const meta = await extractArchiveMetadata(blob, file.name);
         const result = await api().addBook({
           sourcePath: file.path,
           title: meta.title,
@@ -78,7 +78,7 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
 }
 
 /**
- * Mirrors the main-process library (source of truth). EPUB metadata is parsed
+ * Mirrors the main-process library (source of truth). Book metadata is parsed
  * here in the renderer; the record is persisted via IPC. Cover thumbnailing is
  * done in the main process (src/main/library.js).
  */
@@ -107,10 +107,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     return importPaths(files, set);
   },
 
-  /** Imports dropped files, keeping only .epub entries. */
+  /** Imports dropped files, keeping only importable book archives. */
   importDroppedFiles: async (fileList) => {
     const files = Array.from(fileList)
-      .filter((f) => f.name.toLowerCase().endsWith(".epub"))
+      .filter((f) => isBookFileName(f.name))
       .map((f) => ({ path: api().getPathForFile(f), name: f.name, size: f.size }));
     if (!files.length) return { added: 0, duplicate: 0, failed: [] };
     return importPaths(files, set);

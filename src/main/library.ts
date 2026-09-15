@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { libraryStore } from "./services/library-store.js";
 import { resizeCover } from "./cover-image.js";
-import type { Book, AddBookPayload, AddBookResult, UpdateBookPayload, ProgressUpdate, AddBookmarkPayload, AddAnnotationPayload, UpdateAnnotationPayload } from "@/lib/types";
+import { BOOK_EXTENSIONS, storedBookName, type Book, type AddBookPayload, type AddBookResult, type UpdateBookPayload, type ProgressUpdate, type AddBookmarkPayload, type AddAnnotationPayload, type UpdateAnnotationPayload } from "@/lib/types";
 
 const COVER_MAX_WIDTH = 300;
 const COVER_JPEG_QUALITY = 90;
@@ -117,9 +117,13 @@ export const registerLibraryIpc = (): void => {
   ipcMain.handle("library:pick-files", async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const result = await dialog.showOpenDialog(win!, {
-      title: "Import EPUB",
+      title: "Import books",
       properties: ["openFile", "multiSelections"],
-      filters: [{ name: "EPUB", extensions: ["epub"] }],
+      filters: [
+        { name: "Books", extensions: BOOK_EXTENSIONS },
+        { name: "EPUB", extensions: ["epub"] },
+        { name: "Comic archive", extensions: ["cbz", "zip"] },
+      ],
     });
     if (result.canceled) return [];
     return result.filePaths.map((p) => {
@@ -144,8 +148,8 @@ export const registerLibraryIpc = (): void => {
     return fs.promises.readFile(assertUserChosen(filePath));
   });
 
-  // Copies the original .epub into the managed library, persists metadata + cover.
-  // An identical file already in the library is reported back instead of copied.
+  // Copies the original book file into the managed library, persists metadata +
+  // cover. An identical file already in the library is reported back, not copied.
   ipcMain.handle("library:add-book", (_event, payload: AddBookPayload): AddBookResult => {
     const { sourcePath, title, author, language, coverBytes, coverMime, fileSize } = payload;
     assertUserChosen(sourcePath); // copying is a read too
@@ -159,7 +163,7 @@ export const registerLibraryIpc = (): void => {
     const dir = path.join(libraryStore.getBooksDir(), id);
     fs.mkdirSync(dir, { recursive: true });
 
-    const filePath = path.join(dir, "book.epub");
+    const filePath = path.join(dir, storedBookName(sourcePath));
     fs.copyFileSync(sourcePath, filePath);
 
     let coverPath: string | null = null;
@@ -173,7 +177,7 @@ export const registerLibraryIpc = (): void => {
 
     const book = libraryStore.insertBook({
       id,
-      title: title || path.basename(sourcePath, ".epub"),
+      title: title || path.basename(sourcePath, path.extname(sourcePath)),
       author: author || null,
       language: language || null,
       filePath,

@@ -62,7 +62,7 @@ const selfClosingContentTagRes = selfClosingContentTags.map((tag) => ({ tag, re:
  * item, id `aoz-<idref>`), replaces image references with dummy data-URIs
  * carrying the original path, and derives the chapter sections + total char count.
  */
-export function generateHtml(data: Record<string, string | Blob>, contents: OpfContents, _contentsDirectory: string): GeneratedHtml {
+export function generateHtml(data: Record<string, string | Blob>, contents: OpfContents): GeneratedHtml {
   const manifestItems = getManifestItems(contents);
   const fallbackData = new Map<string, string>();
   let navKey = "";

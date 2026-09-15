@@ -1,4 +1,4 @@
-import { extractEpub } from "./extract";
+import { extractArchive } from "@/lib/archive";
 import { generateHtml, PREPEND, type Section } from "./generate-html";
 import { generateStyleSheet } from "./generate-stylesheet";
 import { getBookViewport, getPageProgressionDirection, getRenditionLayout, getRenditionSpread, getSpinePageSpreads, isFixedLayout, type PageSpread, type RenditionSpread } from "./opf";
@@ -27,17 +27,20 @@ export interface ParsedBook {
 }
 
 /**
- * Parses an EPUB blob into the reader payload: flattened HTML, combined
+ * Parses a book blob into the reader payload: flattened HTML, combined
  * stylesheet, image blobs (keyed by path), chapter sections, char count. This is
  * the expensive step; results are cached in IndexedDB by the caller.
  *
  * Fixed-layout books (manga/comics) produce the same flattened HTML plus extra
  * fields describing how to render the wrappers as spreads: page order +
  * `page-spread` sides (`pages`), progression direction (`ppd`), and base viewport.
+ *
+ * `fileName` selects the format by extension. A CBZ enters here as a synthetic
+ * pre-paginated package (see lib/cbz), so everything below is format-blind.
  */
-export async function parseBook(blob: Blob): Promise<ParsedBook> {
-  const { contents, contentsDirectory, result } = await extractEpub(blob);
-  const { element, characters, sections } = generateHtml(result, contents, contentsDirectory);
+export async function parseBook(blob: Blob, fileName: string): Promise<ParsedBook> {
+  const { contents, result } = await extractArchive(blob, fileName);
+  const { element, characters, sections } = generateHtml(result, contents);
   const styleSheet = generateStyleSheet(result, contents);
 
   const blobs: Record<string, Blob> = {};

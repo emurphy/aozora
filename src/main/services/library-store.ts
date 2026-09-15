@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 import { runMigrations, libraryMigrations } from "./migrations/index.js";
 import { toDayKey } from "@/lib/stats/aggregate";
+import { isStoredBookName } from "@/lib/types";
 import type {
   Book,
   Bookmark,
@@ -24,13 +25,13 @@ import type {
 
 /**
  * SQLite-backed library store: source of truth for book metadata and reading
- * progress. Parsed EPUB content is NOT stored here: it lives in the renderer's
+ * progress. Parsed book content is NOT stored here: it lives in the renderer's
  * IndexedDB cache, re-derivable from the original file.
  *
  * On-disk layout (under Electron userData):
- *   userData/aozora.db                  the SQLite database
- *   userData/books/<id>/book.epub       the imported original file
- *   userData/books/<id>/cover.<ext>     extracted cover image (optional)
+ *   userData/aozora.db                     the SQLite database
+ *   userData/books/<id>/book.<epub|cbz>    the imported original file
+ *   userData/books/<id>/cover.<ext>        extracted cover image (optional)
  */
 
 let db: Database.Database | undefined;
@@ -420,10 +421,10 @@ export const libraryStore = {
   },
 
   /**
-   * Repoints every book at the local layout, returning the ids whose .epub is
+   * Repoints every book at the local layout, returning the ids whose file is
    * missing. Needed after a restore: paths are stored absolute, so a backup from
    * another machine carries paths that don't exist here. The layout is derivable
-   * (`books/<id>/book.epub` + sibling cover), so rows are rebuilt, not trusted.
+   * (`books/<id>/book.<epub|cbz>` + sibling cover), so rows are rebuilt, not trusted.
    */
   relocateBooks(): string[] {
     const missing: string[] = [];
@@ -432,10 +433,16 @@ export const libraryStore = {
 
     for (const { id } of rows) {
       const dir = path.join(getBooksDir(), id);
-      const filePath = path.join(dir, "book.epub");
-      if (!fs.existsSync(filePath)) missing.push(id);
-      const cover = fs.existsSync(dir) ? fs.readdirSync(dir).find((name) => name.startsWith("cover.")) : undefined;
-      update.run({ id, filePath, coverPath: cover ? path.join(dir, cover) : null });
+      const files = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+      const book = files.find(isStoredBookName);
+      if (!book) missing.push(id);
+      const cover = files.find((name) => name.startsWith("cover."));
+      update.run({
+        id,
+        // Keep a concrete path for a missing book so the row stays well-formed.
+        filePath: path.join(dir, book ?? "book.epub"),
+        coverPath: cover ? path.join(dir, cover) : null,
+      });
     }
     return missing;
   },

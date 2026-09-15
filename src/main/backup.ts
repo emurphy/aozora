@@ -4,23 +4,23 @@ import fs from "node:fs";
 import { Readable, Writable } from "node:stream";
 import { ZipReaderStream, ZipWriterStream, configure } from "@zip.js/zip.js";
 import { libraryStore } from "./services/library-store.js";
-import type { BackupManifest, BackupPrefs, BackupResult, RestoreResult } from "@/lib/types";
+import { isStoredBookName, type BackupManifest, type BackupPrefs, type BackupResult, type RestoreResult } from "@/lib/types";
 
 /**
  * Export / restore of what re-importing can't bring back: progress, bookmarks,
  * highlights, session history and prefs.
  *
- * A plain .zip, streamed both ways so a library carrying its .epub originals
+ * A plain .zip, streamed both ways so a library carrying its book originals
  * never has to fit in memory:
  *
- *   manifest.json          format + provenance; validated before anything is touched
- *   prefs.json             renderer localStorage (aozora-* keys only)
- *   aozora.db              VACUUM INTO snapshot, WAL folded in
- *   books/<id>/cover.*     always; the library looks broken without covers
- *   books/<id>/book.epub   only when "include book files" is on
+ *   manifest.json               format + provenance; validated before anything is touched
+ *   prefs.json                  renderer localStorage (aozora-* keys only)
+ *   aozora.db                   VACUUM INTO snapshot, WAL folded in
+ *   books/<id>/cover.*          always; the library looks broken without covers
+ *   books/<id>/book.<epub|cbz>  only when "include book files" is on
  *
  * Excludes the dictionary DB (large, re-importable) and imported fonts. Stored
- * uncompressed: epubs and covers gain nothing from deflate and it costs real
+ * uncompressed: books and covers gain nothing from deflate and it costs real
  * time on a multi-GB library.
  */
 
@@ -81,8 +81,9 @@ async function writeArchive(target: string, dbSnapshot: string, includeBooks: bo
   for (const entry of ids) {
     const dir = path.join(booksDir, entry.name);
     for (const file of fs.readdirSync(dir)) {
-      if (file !== "book.epub" && !file.startsWith("cover.")) continue;
-      if (file === "book.epub" && !includeBooks) continue;
+      const isBook = isStoredBookName(file);
+      if (!isBook && !file.startsWith("cover.")) continue;
+      if (isBook && !includeBooks) continue;
       await addFile(zip, `${BOOKS}/${entry.name}/${file}`, path.join(dir, file));
     }
   }
@@ -205,7 +206,7 @@ export const registerBackupIpc = (): void => {
         };
       }
 
-      // Merged, not replaced: a data-only backup has no .epub files, and wiping
+      // Merged, not replaced: a data-only backup has no book files, and wiping
       // the directory would delete the ones already here.
       const restoredBooks = path.join(staging, BOOKS);
       if (fs.existsSync(restoredBooks)) {

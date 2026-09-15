@@ -29,27 +29,21 @@ function imgPage(ref: string) {
   return `<html><body><div class="illust"><img src="${ref}"/></div></body></html>`;
 }
 
-function swappedHref(data: Record<string, string | Blob>, contents: ReturnType<typeof xmlParser.parse>, contentsDir: string) {
-  const { element } = generateHtml(data, contents, contentsDir);
+function swappedHref(data: Record<string, string | Blob>, contents: ReturnType<typeof xmlParser.parse>) {
+  const { element } = generateHtml(data, contents);
   const node = element.querySelector(`#${PREPEND}p1 image, #${PREPEND}p1 img`);
   if (!node) return null;
   return node.getAttribute("href") || node.getAttribute("xlink:href") || node.getAttribute("src");
 }
 
-// Illustration src/xlink:href must be swapped for the dummy placeholder carrying
-// the blob key, regardless of how deep the OPF sits. Image-only pages used to go
-// blank when the OPF lived two or more directories deep (e.g. `OPS/content/`)
-// because the blob key was mis-resolved with a spurious `../` prefix and never
-// matched. Both the normalized href and the blob key are relative to the OPF
-// directory, so they are matched directly now.
-describe("illustration path resolution across OPF directory depths", () => {
+// Both the image href and the blob key are relative to the OPF directory, so a
+// `../`-laden href has to normalize onto the key exactly or the page goes blank.
+describe("illustration path resolution", () => {
   const CASES = [
-    { name: "OPF at root, svg", dir: ".", html: "xhtml/p.xhtml", img: "image/i.jpg", ref: "../image/i.jpg", page: svgPage },
-    { name: "OPF 1 level deep, svg", dir: "OEBPS", html: "xhtml/p.xhtml", img: "image/i.jpg", ref: "../image/i.jpg", page: svgPage },
-    { name: "OPF 2 levels deep, svg", dir: "OPS/content", html: "xhtml/p.xhtml", img: "image/i.jpg", ref: "../image/i.jpg", page: svgPage },
-    { name: "OPF 2 levels deep, img", dir: "item/standard", html: "xhtml/p.xhtml", img: "image/i.jpg", ref: "../image/i.jpg", page: imgPage },
-    { name: "image beside the xhtml", dir: "OEBPS", html: "p.xhtml", img: "i.jpg", ref: "i.jpg", page: imgPage },
-    { name: "deeply nested xhtml", dir: "OEBPS", html: "text/sub/p.xhtml", img: "images/i.jpg", ref: "../../images/i.jpg", page: imgPage },
+    { name: "svg wrapper, image one level up", html: "xhtml/p.xhtml", img: "image/i.jpg", ref: "../image/i.jpg", page: svgPage },
+    { name: "img tag, image one level up", html: "xhtml/p.xhtml", img: "image/i.jpg", ref: "../image/i.jpg", page: imgPage },
+    { name: "image beside the xhtml", html: "p.xhtml", img: "i.jpg", ref: "i.jpg", page: imgPage },
+    { name: "deeply nested xhtml", html: "text/sub/p.xhtml", img: "images/i.jpg", ref: "../../images/i.jpg", page: imgPage },
   ];
 
   for (const c of CASES) {
@@ -58,7 +52,7 @@ describe("illustration path resolution across OPF directory depths", () => {
         [c.html]: c.page(c.ref),
         [c.img]: new Blob(["x"], { type: "image/jpeg" }),
       };
-      expect(swappedHref(data, opf(c.html, c.img), c.dir)).toContain(`aoz:${c.img}`);
+      expect(swappedHref(data, opf(c.html, c.img))).toContain(`aoz:${c.img}`);
     });
   }
 });

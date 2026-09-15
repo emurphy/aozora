@@ -29,7 +29,7 @@ function baseData() {
 }
 
 describe("generateHtml (no TOC)", () => {
-  const { element, characters, sections } = generateHtml(baseData(), contents, ".");
+  const { element, characters, sections } = generateHtml(baseData(), contents);
 
   it("wraps each spine item in an aoz-<idref> div", () => {
     expect(element.querySelector(`#${PREPEND}ch1`)).toBeTruthy();
@@ -82,7 +82,7 @@ describe("generateHtml (image-in-spine / OMF)", () => {
     "images/cover.jpg": new Blob(["x"], { type: "image/jpeg" }),
     "images/p01.jpg": new Blob(["y"], { type: "image/jpeg" }),
   };
-  const { element, characters } = generateHtml(data, omf, ".");
+  const { element, characters } = generateHtml(data, omf);
 
   it("wraps each image-in-spine item in an aoz-<idref> div", () => {
     expect(element.querySelector(`#${PREPEND}image001`)).toBeTruthy();
@@ -122,7 +122,7 @@ describe("generateHtml (flat numeric filenames, substring collision)", () => {
     "11.jpg": new Blob(["b"], { type: "image/jpeg" }),
     "110.jpg": new Blob(["c"], { type: "image/jpeg" }),
   };
-  const { element } = generateHtml(data, num, ".");
+  const { element } = generateHtml(data, num);
   const imgs = Array.from(element.querySelectorAll(`#${PREPEND}c img`));
 
   it("gives each colliding filename its own intact dummy (no nesting)", () => {
@@ -141,7 +141,7 @@ describe("generateHtml (NCX TOC)", () => {
   </navMap></ncx>`;
 
   const data = { ...baseData(), "toc.ncx": ncx };
-  const { sections } = generateHtml(data, contents, ".");
+  const { sections } = generateHtml(data, contents);
 
   it("derives a section per matched chapter, referencing the wrapper id", () => {
     expect(sections.length).toBeGreaterThanOrEqual(2);

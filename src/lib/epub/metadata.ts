@@ -1,4 +1,4 @@
-import { BlobReader, BlobWriter, ZipReader, configure } from "@zip.js/zip.js";
+import { BlobWriter, type Entry } from "@zip.js/zip.js";
 import path from "path-browserify";
 import {
   getManifestItems,
@@ -10,10 +10,6 @@ import {
   type XmlNode,
 } from "./opf";
 import { locateOpf } from "./locate-opf";
-
-// No web workers: simpler/more robust under the Electron renderer + Vite, and
-// metadata reads only touch a few small entries.
-configure({ useWebWorkers: false });
 
 export function resolveCoverHref(
   manifestItems: XmlNode[],
@@ -44,7 +40,8 @@ export function resolveCoverHref(
   return null;
 }
 
-export interface EpubMetadata {
+/** Display metadata + cover, the same shape whatever the format. */
+export interface BookMetadata {
   title: string;
   author: string;
   language: string;
@@ -52,41 +49,33 @@ export interface EpubMetadata {
   coverMime: string | null;
 }
 
-/** Extracts display metadata + cover from an EPUB blob, reading only the entries
+/** Extracts display metadata + cover from an EPUB, reading only the entries
  *  needed (container.xml, the OPF, and the cover image). */
-export async function extractEpubMetadata(blob: Blob): Promise<EpubMetadata> {
-  const reader = new ZipReader(new BlobReader(blob));
-  try {
-    const entries = await reader.getEntries();
-    const fileMap = new Map(entries.map((e) => [e.filename, e]));
+export async function extractEpubMetadata(fileMap: Map<string, Entry>): Promise<BookMetadata> {
+  const { contents, opfPath } = await locateOpf(fileMap);
+  const manifestItems = getManifestItems(contents);
+  const spineRefs = getSpineItemRefs(contents);
+  const metadata = getMetadata(contents);
+  const metaKey = getMetaKey(contents);
 
-    const { contents, opfPath } = await locateOpf(fileMap);
-    const manifestItems = getManifestItems(contents);
-    const spineRefs = getSpineItemRefs(contents);
-    const metadata = getMetadata(contents);
-    const metaKey = getMetaKey(contents);
+  const title = firstText(metadata?.["dc:title"]) || "";
+  const author = firstText(metadata?.["dc:creator"]);
+  const language = firstText(metadata?.["dc:language"]) || "ja";
 
-    const title = firstText(metadata?.["dc:title"]) || "";
-    const author = firstText(metadata?.["dc:creator"]);
-    const language = firstText(metadata?.["dc:language"]) || "ja";
-
-    let coverBytes: ArrayBuffer | null = null;
-    let coverMime: string | null = null;
-    const coverHref = resolveCoverHref(manifestItems, metadata, metaKey, spineRefs);
-    if (coverHref) {
-      const opfDir = path.dirname(opfPath);
-      const coverPath = path.join(opfDir, coverHref);
-      const coverEntry = fileMap.get(coverPath) || fileMap.get(coverHref);
-      const coverItem = manifestItems.find((it) => it["@_href"] === coverHref);
-      coverMime = coverItem?.["@_media-type"] || "image/jpeg";
-      if (coverEntry && !coverEntry.directory) {
-        const coverBlob = await coverEntry.getData<Blob>(new BlobWriter(coverMime ?? undefined));
-        coverBytes = await coverBlob.arrayBuffer();
-      }
+  let coverBytes: ArrayBuffer | null = null;
+  let coverMime: string | null = null;
+  const coverHref = resolveCoverHref(manifestItems, metadata, metaKey, spineRefs);
+  if (coverHref) {
+    const opfDir = path.dirname(opfPath);
+    const coverPath = path.join(opfDir, coverHref);
+    const coverEntry = fileMap.get(coverPath) || fileMap.get(coverHref);
+    const coverItem = manifestItems.find((it) => it["@_href"] === coverHref);
+    coverMime = coverItem?.["@_media-type"] || "image/jpeg";
+    if (coverEntry && !coverEntry.directory && coverEntry.getData) {
+      const coverBlob = await coverEntry.getData<Blob>(new BlobWriter(coverMime ?? undefined));
+      coverBytes = await coverBlob.arrayBuffer();
     }
-
-    return { title, author, language, coverBytes, coverMime };
-  } finally {
-    await reader.close();
   }
+
+  return { title, author, language, coverBytes, coverMime };
 }
