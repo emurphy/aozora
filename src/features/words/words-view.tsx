@@ -319,6 +319,7 @@ export function WordsView() {
       <WordSheet
         entry={detail}
         occurrences={occurrences}
+        booksById={booksById}
         onClose={() => setDetail(null)}
         onSetState={(entry, state) => void setOneState(entry, state)}
         onJump={jumpTo}

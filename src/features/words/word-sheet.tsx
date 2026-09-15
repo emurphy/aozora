@@ -1,17 +1,18 @@
 import { Search, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { relativeTime } from "@/lib/format";
-import { VOCAB_STATES, type VocabEntry, type VocabOccurrence, type VocabState } from "@/lib/types";
+import { VOCAB_STATES, type Book, type VocabEntry, type VocabOccurrence, type VocabState } from "@/lib/types";
 import { STATE_LABELS } from "./word-states";
-import { Headword, MarkedSentence } from "./word-bits";
+import { BookCover, Headword, MarkedSentence } from "./word-bits";
 
 interface Props {
   entry: VocabEntry | null;
   occurrences: VocabOccurrence[];
+  booksById: Map<string, Book>;
   onClose: () => void;
   onSetState: (entry: VocabEntry, state: VocabState) => void;
   /** Opens the book at the passage the word was met in. */
@@ -30,7 +31,7 @@ function metLine(entry: VocabEntry): string {
 }
 
 /** One word in full: its state, how often it was met, and every sighting. */
-export function WordSheet({ entry, occurrences, onClose, onSetState, onJump, onLookUp, onMine, onForget, mining, ankiReady }: Props) {
+export function WordSheet({ entry, occurrences, booksById, onClose, onSetState, onJump, onLookUp, onMine, onForget, mining, ankiReady }: Props) {
   return (
     <Sheet open={!!entry} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-96 sm:max-w-96">
@@ -79,34 +80,36 @@ export function WordSheet({ entry, occurrences, onClose, onSetState, onJump, onL
               </div>
 
               <ul className="space-y-2">
-                {occurrences.map((occurrence) => (
-                  <li key={occurrence.id}>
-                    <Card size="sm" className="gap-2">
-                      <CardHeader>
-                        <CardDescription className="flex items-center gap-2 text-[10px]">
-                          <span className="truncate">{occurrence.bookTitle ?? "No book"}</span>
-                          <span className="ml-auto shrink-0">{relativeTime(occurrence.createdAt)}</span>
-                        </CardDescription>
-                      </CardHeader>
-                      {occurrence.sentence && (
-                        <CardContent>
-                          <MarkedSentence
-                            sentence={occurrence.sentence}
-                            terms={[occurrence.surface, entry.expression, entry.reading]}
-                            className="block text-xs leading-relaxed"
-                          />
+                {occurrences.map((occurrence) => {
+                  const book = occurrence.bookId ? booksById.get(occurrence.bookId) : undefined;
+                  return (
+                    <li key={occurrence.id}>
+                      <Card size="sm">
+                        <CardContent className="flex gap-3">
+                          {/* self-stretch: the cover takes the card's height, so its foot lines up with the button row. */}
+                          {book && <BookCover book={book} className="w-14 min-h-20 shrink-0 self-stretch" />}
+                          <div className="flex min-w-0 flex-1 flex-col gap-2">
+                            {occurrence.sentence && (
+                              <MarkedSentence
+                                sentence={occurrence.sentence}
+                                terms={[occurrence.surface, entry.expression, entry.reading]}
+                                className="block text-xs leading-relaxed"
+                              />
+                            )}
+                            <div className="mt-auto flex items-center justify-between gap-2">
+                              <span className="text-[10px] text-muted-foreground">{relativeTime(occurrence.createdAt)}</span>
+                              {occurrence.bookId && occurrence.charOffset != null && (
+                                <Button size="xs" variant="outline" onClick={() => onJump(occurrence)}>
+                                  Open here
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </CardContent>
-                      )}
-                      {occurrence.bookId && occurrence.charOffset != null && (
-                        <CardContent>
-                          <Button size="xs" variant="outline" onClick={() => onJump(occurrence)}>
-                            Open here
-                          </Button>
-                        </CardContent>
-                      )}
-                    </Card>
-                  </li>
-                ))}
+                      </Card>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </>
