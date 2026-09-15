@@ -8,7 +8,7 @@ import { CollectionBooksDialog, CollectionFormDialog, DeleteCollectionDialog, ty
 import { useCollectionsStore } from "@/stores/collections-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
-import bookTemplate from "@/assets/book-template.png";
+import { coverPlaceholder } from "@/lib/cover";
 import { FAVORITES_COLLECTION_ID, type Book, type Collection } from "@/lib/types";
 
 /** What a shelf tile needs, whether it comes from a row or from the favorite flag. */
@@ -39,7 +39,7 @@ function CoverFan({ books }: { books: Book[] }) {
       {ordered.map((book, i) => (
         <img
           key={book.id}
-          src={book.coverDataUrl ?? bookTemplate}
+          src={book.coverDataUrl ?? coverPlaceholder(book)}
           alt=""
           draggable={false}
           className={cn("aspect-2/3 h-28 shrink-0 object-cover shadow-md ring-1 ring-black/10", ordered.length === 3 && FAN[i])}

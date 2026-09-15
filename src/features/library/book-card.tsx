@@ -3,7 +3,7 @@ import { Check, Clock3 } from "lucide-react";
 import { BookContextMenu } from "./book-actions";
 import { readingStatus, relativeTime } from "@/lib/format";
 import { useLibraryPrefs } from "@/stores/library-prefs-store";
-import bookTemplate from "@/assets/book-template.png";
+import { coverPlaceholder } from "@/lib/cover";
 import type { Book } from "@/lib/types";
 
 /**
@@ -21,6 +21,7 @@ export function BookCard({ book, onOpen }: { book: Book; onOpen?: (book: Book) =
   const [coverError, setCoverError] = useState(false);
   useEffect(() => setCoverError(false), [book.coverDataUrl]);
   const useFallback = !book.coverDataUrl || coverError;
+  const placeholder = coverPlaceholder(book);
 
   return (
     <BookContextMenu book={book}>
@@ -29,7 +30,7 @@ export function BookCard({ book, onOpen }: { book: Book; onOpen?: (book: Book) =
           <div className="relative aspect-2/3 w-full overflow-hidden bg-muted transition-all transform-gpu will-change-transform duration-300 ease-out group-hover/cover:-translate-y-1 group-hover/cover:shadow-xl">
             <button type="button" onClick={() => onOpen?.(book)} title={book.title} className="block h-full w-full cursor-pointer text-left">
               <img
-                src={useFallback ? bookTemplate : (book.coverDataUrl ?? bookTemplate)}
+                src={useFallback ? placeholder : (book.coverDataUrl ?? placeholder)}
                 alt={useFallback ? "" : book.title}
                 onError={() => setCoverError(true)}
                 className="h-full w-full object-cover"

@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { splitOnTerm } from "@/lib/vocab/mark";
-import bookTemplate from "@/assets/book-template.png";
+import { coverPlaceholder } from "@/lib/cover";
 import type { Book, VocabEntry } from "@/lib/types";
 
 /** Small pieces shared by the words table, the book filter and the detail sheet. */
@@ -31,7 +31,7 @@ export function BookCover({ book, className }: { book: Book; className?: string 
   useEffect(() => setFailed(false), [book.coverDataUrl]);
   return (
     <img
-      src={!book.coverDataUrl || failed ? bookTemplate : book.coverDataUrl}
+      src={!book.coverDataUrl || failed ? coverPlaceholder(book) : book.coverDataUrl}
       alt=""
       title={book.title}
       onError={() => setFailed(true)}

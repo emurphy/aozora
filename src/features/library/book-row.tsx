@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookActionsMenu, BookContextMenu } from "./book-actions";
 import { readingStatus, relativeTime, STATUS_LABELS, type ReadingStatus } from "@/lib/format";
-import bookTemplate from "@/assets/book-template.png";
+import { coverPlaceholder } from "@/lib/cover";
 import type { Book } from "@/lib/types";
 
 const STATUS_VARIANT: Record<ReadingStatus, "outline" | "secondary" | "default"> = {
@@ -22,10 +22,10 @@ export function BookRow({ book, onOpen }: { book: Book; onOpen?: (book: Book) =>
   const pct = Math.round((book.progress ?? 0) * 100);
   const lastRead = relativeTime(book.lastOpenedAt);
 
-  // Fall back to the template placeholder when the cover is missing or fails.
+  // Fall back to the placeholder when the cover is missing or fails.
   const [coverError, setCoverError] = useState(false);
   useEffect(() => setCoverError(false), [book.coverDataUrl]);
-  const coverSrc = !book.coverDataUrl || coverError ? bookTemplate : book.coverDataUrl;
+  const coverSrc = !book.coverDataUrl || coverError ? coverPlaceholder(book) : book.coverDataUrl;
 
   return (
     <BookContextMenu book={book}>

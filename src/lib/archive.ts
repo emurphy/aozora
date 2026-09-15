@@ -2,6 +2,8 @@ import { BlobReader, ZipReader, configure, type Entry } from "@zip.js/zip.js";
 import { extractEpub, type ExtractedEpub } from "./epub/extract";
 import { extractEpubMetadata, type BookMetadata } from "./epub/metadata";
 import { extractCbz, extractCbzMetadata } from "./cbz/extract";
+import { decodeTextFile } from "./txt/decode";
+import { extractTxt, extractTxtMetadata } from "./txt/extract";
 import { bookFormat } from "./types";
 
 // No web workers: simpler/more robust under the Electron renderer + Vite.
@@ -20,9 +22,11 @@ async function openZip(blob: Blob): Promise<{ fileMap: Map<string, Entry>; close
   }
 }
 
-/** Unpacks a book archive into the shape the parser consumes. `fileName` decides
- *  how it is read (see bookFormat). */
+/** Unpacks a book into the shape the parser consumes. `fileName` decides how it
+ *  is read (see bookFormat); text files are not archives, so they branch first. */
 export async function extractArchive(blob: Blob, fileName: string): Promise<ExtractedEpub> {
+  if (bookFormat(fileName) === "txt") return extractTxt(decodeTextFile(await blob.arrayBuffer()), fileName);
+
   const { fileMap, close } = await openZip(blob);
   try {
     return bookFormat(fileName) === "cbz" ? await extractCbz(fileMap) : await extractEpub(fileMap);
@@ -31,9 +35,11 @@ export async function extractArchive(blob: Blob, fileName: string): Promise<Extr
   }
 }
 
-/** Display metadata + cover. `fileName` decides how the archive is read, and is
- *  the title fallback for a CBZ carrying no ComicInfo.xml. */
+/** Display metadata + cover. `fileName` decides how the book is read, and is the
+ *  title fallback for a CBZ with no ComicInfo.xml or a text file with no header. */
 export async function extractArchiveMetadata(blob: Blob, fileName: string): Promise<BookMetadata> {
+  if (bookFormat(fileName) === "txt") return extractTxtMetadata(decodeTextFile(await blob.arrayBuffer()), fileName);
+
   const { fileMap, close } = await openZip(blob);
   try {
     return bookFormat(fileName) === "cbz" ? await extractCbzMetadata(fileMap, fileName) : await extractEpubMetadata(fileMap);

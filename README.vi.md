@@ -23,6 +23,9 @@
 
 ## Tính năng
 
+- **Định dạng hỗ trợ**: **EPUB** (co giãn và fixed-layout), truyện tranh **CBZ**, và
+  **`.txt` của 青空文庫**. File txt được đọc đúng theo quy ước của kho: Shift_JIS hoặc
+  UTF-8, ruby `《》` và `｜`, chú thích `［＃…］`, cùng ngoại tự (gaiji) ghi bằng mã JIS X 0213.
 - **Bố cục & hướng chữ linh hoạt**: Hỗ trợ xem dạng **Phân trang** (**Paginated**) hoặc **Cuộn liên tục** (**Continuous**), cùng các hướng chữ ngang hoặc dọc (tategaki - vertical-rl). Khi đọc chiều ngang, bạn có thể chỉnh số cột hiển thị trên mỗi trang (ở chế độ Phân trang) hoặc độ rộng hai bên lề (ở chế độ Cuộn).
 - **Tùy chỉnh Furigana**: Hiển thị qua thẻ `<ruby>` với 5 chế độ tiện lợi: **Hiện**, **Ẩn**, **Hiện mờ**, **Hiện khi nhấp** hoặc **Hiện khi di chuột/nhấp**.
 - **Xem chú thích dạng Popup**: Nhấp vào vị trí chú thích của tác giả để mở ngay một bảng nhỏ tại chỗ, không lo bị nhảy xuống cuối chương.

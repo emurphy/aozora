@@ -24,6 +24,9 @@
 
 ## Features
 
+- **Formats**: **EPUB** (reflowable and fixed-layout), **CBZ** comic archives, and
+  **Aozora Bunko `.txt`**. Text files are read as the archive publishes them: Shift_JIS or
+  UTF-8, `《》` and `｜` ruby, `［＃…］` notes, and gaiji cited by JIS X 0213 code.
 - **Flexible layout & text direction**: read in **Paginated** or **Continuous** (native
   scroll) mode, with horizontal or vertical (tategaki, vertical-rl) text direction. When
   reading horizontally, you can adjust the number of **columns per page** (Paginated) or

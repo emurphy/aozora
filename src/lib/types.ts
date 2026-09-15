@@ -79,23 +79,26 @@ export interface PickedFile {
 }
 
 /** Extensions the importer accepts. */
-export const BOOK_EXTENSIONS: string[] = ["epub", "cbz", "zip"];
+export const BOOK_EXTENSIONS: string[] = ["epub", "cbz", "zip", "txt"];
 
 export function isBookFileName(name: string): boolean {
   return BOOK_EXTENSIONS.includes(name.split(".").pop()?.toLowerCase() ?? "");
 }
 
-/** "epub" (EPUB) or "cbz" (comic archive: a bare zip of page images). */
-export type BookFormat = "epub" | "cbz";
+/** "epub" (EPUB), "cbz" (comic archive: a bare zip of page images), or "txt"
+ *  (Aozora Bunko plain text). */
+export type BookFormat = "epub" | "cbz" | "txt";
 
 /**
- * How a file is read, decided by its extension alone: `.epub` is an EPUB, `.cbz`
- * and `.zip` are comic archives. No content sniffing, so a mislabelled file
- * fails with the error its extension implies instead of opening as the other
- * format.
+ * How a file is read, decided by its extension alone: `.epub` is an EPUB, `.txt`
+ * is Aozora Bunko text, `.cbz` and `.zip` are comic archives. No content
+ * sniffing, so a mislabelled file fails with the error its extension implies
+ * instead of opening as another format.
  */
 export function bookFormat(nameOrPath: string): BookFormat {
-  return nameOrPath.toLowerCase().endsWith(".epub") ? "epub" : "cbz";
+  const name = nameOrPath.toLowerCase();
+  if (name.endsWith(".epub")) return "epub";
+  return name.endsWith(".txt") ? "txt" : "cbz";
 }
 
 /**
@@ -108,7 +111,7 @@ export function storedBookName(sourcePath: string): string {
 
 /** Whether a file in a book folder is the imported original. */
 export function isStoredBookName(name: string): boolean {
-  return name === "book.epub" || name === "book.cbz";
+  return name === "book.epub" || name === "book.cbz" || name === "book.txt";
 }
 
 // --- IPC payloads. ----------------------------------------------------------

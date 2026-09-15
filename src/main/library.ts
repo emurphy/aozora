@@ -123,6 +123,7 @@ export const registerLibraryIpc = (): void => {
         { name: "Books", extensions: BOOK_EXTENSIONS },
         { name: "EPUB", extensions: ["epub"] },
         { name: "Comic archive", extensions: ["cbz", "zip"] },
+        { name: "Aozora Bunko text", extensions: ["txt"] },
       ],
     });
     if (result.canceled) return [];

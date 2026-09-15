@@ -2,8 +2,9 @@ import { describe, it, expect } from "vitest";
 import { bookFormat, isBookFileName, storedBookName, isStoredBookName } from "@/lib/types";
 
 describe("bookFormat", () => {
-  it("reads .epub as an EPUB and the comic extensions as CBZ", () => {
+  it("reads .epub as an EPUB, .txt as Aozora text and the comic extensions as CBZ", () => {
     expect(bookFormat("novel.epub")).toBe("epub");
+    expect(bookFormat("aa_kazokusama.txt")).toBe("txt");
     expect(bookFormat("manga.cbz")).toBe("cbz");
     expect(bookFormat("scans.zip")).toBe("cbz");
   });
@@ -11,13 +12,14 @@ describe("bookFormat", () => {
   it("ignores case and the rest of the path", () => {
     expect(bookFormat("C:/books/Vol 1.EPUB")).toBe("epub");
     expect(bookFormat("/library/x/book.CBZ")).toBe("cbz");
+    expect(bookFormat("/library/x/novel.TXT")).toBe("txt");
   });
 });
 
 describe("isBookFileName", () => {
   it("accepts the importable extensions only", () => {
-    expect(["a.epub", "b.cbz", "c.zip"].every(isBookFileName)).toBe(true);
-    expect(["a.pdf", "b.cbr", "notes.txt", "noextension"].some(isBookFileName)).toBe(false);
+    expect(["a.epub", "b.cbz", "c.zip", "d.txt"].every(isBookFileName)).toBe(true);
+    expect(["a.pdf", "b.cbr", "c.mobi", "noextension"].some(isBookFileName)).toBe(false);
   });
 });
 
@@ -26,11 +28,13 @@ describe("storedBookName", () => {
     expect(storedBookName("/src/novel.epub")).toBe("book.epub");
     expect(storedBookName("/src/manga.cbz")).toBe("book.cbz");
     expect(storedBookName("/src/scans.zip")).toBe("book.cbz");
+    expect(storedBookName("/src/aa_kazokusama.txt")).toBe("book.txt");
   });
 
   it("round-trips through the stored-file check", () => {
     expect(isStoredBookName(storedBookName("x.epub"))).toBe(true);
     expect(isStoredBookName(storedBookName("x.zip"))).toBe(true);
+    expect(isStoredBookName(storedBookName("x.txt"))).toBe(true);
     expect(isStoredBookName("cover.jpg")).toBe(false);
   });
 });

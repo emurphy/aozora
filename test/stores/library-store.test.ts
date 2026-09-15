@@ -99,21 +99,22 @@ describe("importBooks (native picker)", () => {
 });
 
 describe("importDroppedFiles", () => {
-  it("keeps only book archives (case-insensitive) and resolves their paths", async () => {
+  it("keeps only book files (case-insensitive) and resolves their paths", async () => {
     const fileList = [
       { name: "novel.EPUB", size: 10 },
-      { name: "notes.txt", size: 5 },
+      { name: "cover.png", size: 5 },
       { name: "vol2.epub", size: 20 },
       { name: "manga.cbz", size: 30 },
       { name: "scans.zip", size: 40 },
+      { name: "aa_kazokusama.txt", size: 50 },
     ];
     const res = await useLibraryStore.getState().importDroppedFiles(fileList as unknown as FileList);
-    expect(api.getPathForFile).toHaveBeenCalledTimes(4);
-    expect(api.addBook).toHaveBeenCalledTimes(4);
-    expect(res.added).toBe(4);
+    expect(api.getPathForFile).toHaveBeenCalledTimes(5);
+    expect(api.addBook).toHaveBeenCalledTimes(5);
+    expect(res.added).toBe(5);
   });
 
-  it("returns an empty summary when nothing is a book archive", async () => {
+  it("returns an empty summary when nothing is a book file", async () => {
     const res = await useLibraryStore.getState().importDroppedFiles([{ name: "a.pdf", size: 1 }] as unknown as FileList);
     expect(res).toEqual({ added: 0, duplicate: 0, failed: [] });
     expect(api.addBook).not.toHaveBeenCalled();

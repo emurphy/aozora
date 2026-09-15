@@ -1,0 +1,73 @@
+import { escapeHtml } from "@/lib/dictionary/escape";
+import type { ExtractedEpub } from "@/lib/epub/extract";
+import type { BookMetadata } from "@/lib/epub/metadata";
+import type { OpfContents } from "@/lib/epub/opf";
+import { parseAozoraBody, type TxtChapter } from "./parse";
+import { splitAozoraText } from "./structure";
+
+/**
+ * Presents an Aozora Bunko text file as a synthetic EPUB package, the same trick
+ * the comic reader uses (lib/cbz): chapters become spine items and the TOC a nav
+ * document, so nothing downstream needs a plain-text branch.
+ */
+
+const NAV_HREF = "nav.xhtml";
+const CSS_HREF = "style.css";
+
+/** Only the classes the text parser emits; the reader supplies everything else. */
+const STYLESHEET = `
+.aoz-txt-sesame { font-style: normal; text-emphasis: filled sesame; -webkit-text-emphasis: filled sesame; }
+.aoz-txt-underline { text-decoration: underline; }
+.aoz-txt-gaiji { border-bottom: 1px dotted currentColor; }
+h2, h3, h4 { font-weight: bold; margin: 2em 0; }
+`;
+
+function buildNav(chapters: TxtChapter[], title: string): string {
+  const labelled = chapters.filter((chapter) => chapter.label);
+  const entries = labelled.length ? labelled : chapters.slice(0, 1).map((chapter) => ({ ...chapter, label: title }));
+  const items = entries.map((chapter) => `<li><a href="${chapter.href}">${escapeHtml(chapter.label || title)}</a></li>`).join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body><nav id="toc" epub:type="toc"><ol>${items}</ol></nav></body></html>`;
+}
+
+function buildOpf(chapters: TxtChapter[], title: string, author: string): OpfContents {
+  return {
+    package: {
+      metadata: { "dc:title": title, "dc:creator": author, "dc:language": "ja" },
+      manifest: {
+        item: [
+          ...chapters.map((chapter) => ({ "@_id": chapter.id, "@_href": chapter.href, "@_media-type": "application/xhtml+xml" })),
+          { "@_id": "nav", "@_href": NAV_HREF, "@_media-type": "application/xhtml+xml", "@_properties": "nav" },
+          { "@_id": "css", "@_href": CSS_HREF, "@_media-type": "text/css" },
+        ],
+      },
+      // Aozora Bunko text is tategaki, and rtl is what the reader reads that from.
+      spine: {
+        "@_page-progression-direction": "rtl",
+        itemref: chapters.map((chapter) => ({ "@_idref": chapter.id })),
+      },
+    },
+  };
+}
+
+export function extractTxt(text: string, fileName: string): ExtractedEpub {
+  const { title, author, lines } = splitAozoraText(text);
+  const chapters = parseAozoraBody(lines);
+  if (!chapters.length) throw new Error("Invalid text file: no readable content");
+
+  const displayTitle = title || stripExtension(fileName);
+  const result: Record<string, string | Blob> = { [NAV_HREF]: buildNav(chapters, displayTitle), [CSS_HREF]: STYLESHEET };
+  for (const chapter of chapters) result[chapter.href] = chapter.xhtml;
+
+  return { contents: buildOpf(chapters, displayTitle, author), result };
+}
+
+/** Title and author sit on the first lines; a text file carries no cover. */
+export function extractTxtMetadata(text: string, fileName: string): BookMetadata {
+  const { title, author } = splitAozoraText(text);
+  return { title: title || stripExtension(fileName), author, language: "ja", coverBytes: null, coverMime: null };
+}
+
+function stripExtension(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, "");
+}

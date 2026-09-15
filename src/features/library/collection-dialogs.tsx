@@ -20,7 +20,7 @@ import { useCollectionsStore } from "@/stores/collections-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { normalizeSearch } from "@/lib/format";
-import bookTemplate from "@/assets/book-template.png";
+import { coverPlaceholder } from "@/lib/cover";
 import { FAVORITES_COLLECTION_ID, type Book, type Collection } from "@/lib/types";
 
 /**
@@ -263,7 +263,7 @@ function PickerTile({ book, checked, onToggle }: { book: Book; checked: boolean;
       >
         <span className="relative block aspect-2/3 w-full overflow-hidden bg-muted">
           <img
-            src={book.coverDataUrl ?? bookTemplate}
+            src={book.coverDataUrl ?? coverPlaceholder(book)}
             alt=""
             draggable={false}
             className={cn("h-full w-full object-cover transition-opacity", !checked && "opacity-70")}
