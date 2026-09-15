@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Check, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ANNOTATION_COLORS } from "@/lib/reader/annotations";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { useAnchoredPosition } from "./hooks/use-anchored-position";
 import { useDismiss } from "./hooks/use-dismiss";
 

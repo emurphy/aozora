@@ -1,5 +1,5 @@
 import { ipcRenderer } from "electron";
-import type { SetVocabStatePayload, VocabFilter, VocabLookupInput, VocabState } from "@/lib/types";
+import type { SetVocabStatePayload, VocabFilter, VocabLookupInput } from "@/lib/types";
 
 /**
  * Vocabulary API exposed as `window.electronAPI.vocab`. The reader records the
@@ -16,8 +16,6 @@ export const vocabApi = {
 
   /** Sets one word's state, creating it if it was never captured. */
   setState: (payload: SetVocabStatePayload) => ipcRenderer.invoke("vocab:set-state", payload),
-
-  setStateMany: (ids: string[], state: VocabState) => ipcRenderer.invoke("vocab:set-state-many", ids, state),
 
   /** Flags a word as mined to Anki (called after a card is added). */
   markMined: (expression: string, reading: string) => ipcRenderer.invoke("vocab:mark-mined", expression, reading),

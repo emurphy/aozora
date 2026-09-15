@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { BarChart3, BookA, BookOpen, CheckCircle2, Circle, Heart, Languages, Library, Settings } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { readingStatus } from "@/lib/format";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore, type StatusFilter } from "@/stores/ui-store";

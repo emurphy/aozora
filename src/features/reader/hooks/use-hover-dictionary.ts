@@ -57,8 +57,10 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
   // words while reaching for the popup don't re-trigger a lookup.
   const lookupAnchorRef = useRef<DOMRect | null>(null); // matched-run box of the open popup
   // Live match range + its content root, kept so Anki mining can pull the enclosing
-  // sentence and a screenshot rect for the word currently in the popup.
-  const mineCtxRef = useRef<{ range: Range; contentRoot: Element } | null>(null);
+  // sentence and a screenshot rect for the word currently in the popup. The surface
+  // comes from the scanned text, not range.toString(): a Range spans the furigana
+  // the text walk skipped, so its string wouldn't occur in the sentence.
+  const mineCtxRef = useRef<{ range: Range; contentRoot: Element; surface: string } | null>(null);
   const popupRectRef = useRef<{ left: number; top: number; right: number; bottom: number } | null>(null);
   const enabledRef = useRef(enabled);
   const modifierRef = useRef(modifier);
@@ -104,7 +106,7 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
           reading: top.reading ?? "",
           bookId: bookRef.current?.id ?? null,
           charOffset: charRef.current ?? null,
-          surface: ctx ? ctx.range.toString() : null,
+          surface: ctx?.surface ?? null,
           sentence: ctx ? sentenceAround(ctx.range, ctx.contentRoot) : null,
           at: Date.now(),
         });
@@ -214,7 +216,8 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
           const range = source.rangeForLength(result.matchedLength);
           const anchor = range?.getBoundingClientRect() ?? null;
           setLookupHighlight(range);
-          mineCtxRef.current = range ? { range, contentRoot } : null; // context for Anki mining
+          // Context for Anki mining and for the sighting's surface form.
+          mineCtxRef.current = range ? { range, contentRoot, surface: source.text.slice(0, result.matchedLength) } : null;
           lookupAnchorRef.current = anchor; // pin point for the frozen zone
           popupRectRef.current = null; // re-measured by the popup's onLayout
           setLookup({ result, anchor });

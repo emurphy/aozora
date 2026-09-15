@@ -27,7 +27,6 @@ import type {
   VocabFilter,
   VocabLookupInput,
   VocabOccurrence,
-  VocabState,
   VocabStats,
   VoicevoxSpeakerDetail,
   VoicevoxSynthesisResult,
@@ -82,7 +81,6 @@ export interface VocabApi {
   list(filter: VocabFilter): Promise<VocabEntry[]>;
   occurrences(vocabId: string): Promise<VocabOccurrence[]>;
   setState(payload: SetVocabStatePayload): Promise<VocabEntry | null>;
-  setStateMany(ids: string[], state: VocabState): Promise<number>;
   markMined(expression: string, reading: string): Promise<VocabEntry | null>;
   remove(id: string): Promise<boolean>;
   stats(): Promise<VocabStats>;

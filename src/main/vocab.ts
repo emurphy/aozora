@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { libraryStore } from "./services/library-store.js";
-import type { SetVocabStatePayload, VocabFilter, VocabLookupInput, VocabState } from "@/lib/types";
+import type { SetVocabStatePayload, VocabFilter, VocabLookupInput } from "@/lib/types";
 
 /**
  * Vocabulary IPC: the words looked up in the reader. Lookups arrive in batches
@@ -23,8 +23,6 @@ export const registerVocabIpc = (): void => {
   ipcMain.handle("vocab:set-state", (_event, { expression, reading, state }: SetVocabStatePayload) =>
     libraryStore.setVocabState(expression, reading ?? "", state, Date.now()),
   );
-
-  ipcMain.handle("vocab:set-state-many", (_event, ids: string[], state: VocabState) => libraryStore.setVocabStateByIds(ids, state));
 
   ipcMain.handle("vocab:mark-mined", (_event, expression: string, reading: string) =>
     libraryStore.markVocabMined(expression, reading ?? "", Date.now()),

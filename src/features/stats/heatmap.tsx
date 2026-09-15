@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { buildHeatmapWeeks, intensityLevel, formatDuration, formatCompact } from "@/lib/stats/aggregate";
 import type { DayValue, HeatmapCell } from "@/lib/stats/aggregate";
 

@@ -220,6 +220,7 @@ interface VocabRow {
   mined_at: number | null;
   last_book_id: string | null;
   last_book_title: string | null;
+  last_surface: string | null;
   last_sentence: string | null;
 }
 
@@ -244,6 +245,7 @@ type SqlParams = Record<string, string | number | null>;
 const VOCAB_SELECT = `
   SELECT v.id, v.expression, v.reading, v.state, v.lookup_count, v.first_at, v.last_at, v.mined_at,
          l.book_id  AS last_book_id,
+         l.surface  AS last_surface,
          l.sentence AS last_sentence,
          b.title    AS last_book_title
     FROM vocab v
@@ -315,6 +317,7 @@ function rowToVocab(row: VocabRow | undefined): VocabEntry | null {
     minedAt: row.mined_at ?? null,
     lastBookId: row.last_book_id ?? null,
     lastBookTitle: row.last_book_title ?? null,
+    lastSurface: row.last_surface ?? null,
     lastSentence: row.last_sentence ?? null,
   };
 }
@@ -753,17 +756,6 @@ export const libraryStore = {
        ON CONFLICT(expression, reading) DO UPDATE SET state = excluded.state`,
     ).run({ id: randomUUID(), expression, reading, state, now });
     return this.getVocab(expression, reading);
-  },
-
-  /** Bulk state change from the vocabulary page. Returns how many rows moved. */
-  setVocabStateByIds(ids: string[], state: VocabState): number {
-    if (!ids.length) return 0;
-    const update = stmt("UPDATE vocab SET state = @state WHERE id = @id");
-    const apply = getDb().transaction((batch: string[]) => {
-      for (const id of batch) update.run({ id, state });
-    });
-    apply(ids);
-    return ids.length;
   },
 
   /** Flags a word as mined to Anki; an untouched word also graduates to learning. */

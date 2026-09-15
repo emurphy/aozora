@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { useAnkiStore } from "@/stores/anki-store";
 import { Group } from "./group";
 import { FIELD_MARKERS, KANJI_FIELD_MARKERS } from "@/lib/dictionary/anki-note";

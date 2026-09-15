@@ -24,7 +24,7 @@ import { useDictionaryStore, LOOKUP_MODIFIERS, type LookupModifier } from "@/sto
 import { useDictionaryImportStore } from "@/stores/dictionary-import-store";
 import { RECOMMENDED_DICTIONARIES, type RecommendedDictionary } from "@/features/dictionaries/recommended";
 import { syncDictionaryStyles } from "@/lib/dictionary/dict-styles";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type { DictionaryInfo } from "@/lib/types";
 
 const api = () => window.electronAPI.dictionary;

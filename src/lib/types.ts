@@ -520,6 +520,8 @@ export interface VocabEntry {
   lastBookId: string | null;
   /** Null once that book is removed from the library. */
   lastBookTitle: string | null;
+  /** Inflected form of the last sighting, so its sentence can be marked. */
+  lastSurface: string | null;
   lastSentence: string | null;
 }
 

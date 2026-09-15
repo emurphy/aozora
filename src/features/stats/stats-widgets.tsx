@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 
 interface StatCardProps {
   icon?: LucideIcon;

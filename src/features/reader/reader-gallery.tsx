@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { ChevronLeft, ChevronRight, X, BookOpen, Download, ZoomIn, ZoomOut } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type { Illustration } from "@/lib/reader/illustrations";
 import { Button } from "@/components/ui/button";
 

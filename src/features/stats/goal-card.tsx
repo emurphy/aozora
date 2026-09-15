@@ -1,7 +1,7 @@
 import { Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { formatCompact } from "@/lib/stats/aggregate";
 import { DAILY_GOAL_OPTIONS } from "@/stores/stats-prefs-store";
 

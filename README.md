@@ -40,9 +40,11 @@
 - **Illustration gallery**: browse every image in the book in a full-screen viewer, and
   click an image to jump straight to its position in the text and keep reading.
 - **Vocabulary tracking**: every word you look up is saved with the sentence it came
-  from and the book it was met in. The **Words** page lists them with how often you have
-  met each one, lets you mark them **learning / known / ignored**, mine a batch to Anki,
-  and jump straight back to any passage a word appeared in.
+  from (the word marked inside it) and the book it was met in. The **Words** page lists
+  them with how often you have met each one, and a right-click marks a word **learning /
+  known / ignored**, mines it to Anki, or jumps back to any passage it appeared in. You
+  can also look a word up from that page without opening a book; those searches are not
+  counted, only the words you meet while reading.
 - **Reading statistics**: automatically tracks your reading time and compiles it into a
   visual dashboard: a GitHub-style heatmap, reading streaks, a daily goal, milestones, and
   per-book totals.

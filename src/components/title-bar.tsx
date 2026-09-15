@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MinusIcon, SquareIcon, CopyIcon, XIcon, Moon, Sun, Info, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { useSettingsStore, THEMES } from "@/stores/settings-store";
 import { useDictionaryImportStore } from "@/stores/dictionary-import-store";
 import { AboutDialog } from "@/components/about-dialog";
