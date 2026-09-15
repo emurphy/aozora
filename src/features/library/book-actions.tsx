@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Heart, HeartOff, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Check, FolderMinus, Heart, HeartOff, LibraryBig, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -13,9 +13,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useCollectionsStore } from "@/stores/collections-store";
 import { useLibraryStore } from "@/stores/library-store";
+import { useUiStore } from "@/stores/ui-store";
 import { readingStatus } from "@/lib/format";
 import { BookEditDialog } from "./book-edit-dialog";
+import { BookCollectionsDialog } from "./collection-dialogs";
 import type { Book } from "@/lib/types";
 
 interface ActionItem {
@@ -32,6 +35,8 @@ interface BookActionsState {
   items: ActionItem[];
   editOpen: boolean;
   setEditOpen: (open: boolean) => void;
+  collectionsOpen: boolean;
+  setCollectionsOpen: (open: boolean) => void;
   confirmOpen: boolean;
   setConfirmOpen: (open: boolean) => void;
   handleRemove: () => Promise<void>;
@@ -45,7 +50,11 @@ function useBookActions(book: Book): BookActionsState {
   const removeBook = useLibraryStore((s) => s.removeBook);
   const setFinished = useLibraryStore((s) => s.setFinished);
   const toggleFavorite = useLibraryStore((s) => s.toggleFavorite);
+  const collections = useCollectionsStore((s) => s.collections);
+  const removeBookFromCollection = useCollectionsStore((s) => s.removeBookFromCollection);
+  const collectionFilter = useUiStore((s) => s.collectionFilter);
   const [editOpen, setEditOpen] = useState(false);
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const status = readingStatus(book);
 
@@ -68,6 +77,10 @@ function useBookActions(book: Book): BookActionsState {
       .catch(() => toast.error("Failed to update favorite"));
   };
 
+  // Curating the shelf you are looking at deserves one click, so offer it only
+  // while the library is narrowed to a collection this book is on.
+  const openCollection = collections.find((c) => c.id === collectionFilter && c.bookIds.includes(book.id));
+
   // Descriptors shared by both menus; falsy entries are filtered so the mark
   // items only show when they'd actually change state.
   const items = [
@@ -75,13 +88,20 @@ function useBookActions(book: Book): BookActionsState {
     book.favorite
       ? { key: "favorite", label: "Remove from favorites", icon: HeartOff, onSelect: handleToggleFavorite }
       : { key: "favorite", label: "Add to favorites", icon: Heart, onSelect: handleToggleFavorite },
+    { key: "collections", label: "Collections…", icon: LibraryBig, onSelect: () => setCollectionsOpen(true) },
+    openCollection && {
+      key: "uncollect",
+      label: "Remove from collection",
+      icon: FolderMinus,
+      onSelect: () => removeBookFromCollection(openCollection.id, book.id).catch(() => toast.error("Failed to update collection")),
+    },
     status !== "finished" && { key: "finish", label: "Mark as finished", icon: Check, onSelect: () => handleMark(true) },
     status !== "unread" && { key: "unread", label: "Mark as unread", icon: RotateCcw, onSelect: () => handleMark(false) },
     { key: "sep", separator: true },
     { key: "remove", label: "Remove", icon: Trash2, variant: "destructive", onSelect: () => setConfirmOpen(true) },
   ].filter(Boolean) as ActionItem[];
 
-  return { status, items, editOpen, setEditOpen, confirmOpen, setConfirmOpen, handleRemove };
+  return { status, items, editOpen, setEditOpen, collectionsOpen, setCollectionsOpen, confirmOpen, setConfirmOpen, handleRemove };
 }
 
 /** The edit dialog + remove confirmation, rendered once per menu instance. */
@@ -89,6 +109,8 @@ function BookActionDialogs({ book, state }: { book: Book; state: BookActionsStat
   return (
     <>
       <BookEditDialog book={book} open={state.editOpen} onOpenChange={state.setEditOpen} />
+
+      <BookCollectionsDialog book={book} open={state.collectionsOpen} onOpenChange={state.setCollectionsOpen} />
 
       <AlertDialog open={state.confirmOpen} onOpenChange={state.setConfirmOpen}>
         <AlertDialogContent>
@@ -118,7 +140,7 @@ export function BookContextMenu({ book, children }: { book: Book; children: Reac
           with the menu's body pointer-events lock. */}
       <ContextMenu modal={false}>
         <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-        <ContextMenuContent className="w-44">
+        <ContextMenuContent className="w-48">
           {state.items.map((item) =>
             item.separator ? (
               <ContextMenuSeparator key={item.key} />
@@ -148,7 +170,7 @@ export function BookActionsMenu({ book, trigger }: { book: Book; trigger: React.
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent align="end" className="w-48">
           {state.items.map((item) =>
             item.separator ? (
               <DropdownMenuSeparator key={item.key} />

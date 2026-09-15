@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TitleBar } from "@/components/title-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { LibraryView } from "@/features/library/library-view";
+import { CollectionsView } from "@/features/library/collections-view";
 import { ReaderView } from "@/features/reader/reader-view";
 import { StatsView } from "@/features/stats/stats-view";
 import { WordsView } from "@/features/words/words-view";
@@ -13,6 +14,7 @@ import { useUiStore } from "@/stores/ui-store";
 import { useSettingsStore, THEMES } from "@/stores/settings-store";
 import { useFontsStore } from "@/stores/fonts-store";
 import { useDictionaryImportStore } from "@/stores/dictionary-import-store";
+import { useCollectionsStore } from "@/stores/collections-store";
 import { syncDictionaryStyles } from "@/lib/dictionary/dict-styles";
 
 export function App() {
@@ -30,6 +32,12 @@ export function App() {
     const setFullscreen = useUiStore.getState().setFullscreen;
     api.isFullscreen().then(setFullscreen);
     return api.onFullscreenChanged(setFullscreen);
+  }, []);
+
+  // The sidebar shows collections on every page, so mirror them once here rather
+  // than per view.
+  useEffect(() => {
+    void useCollectionsStore.getState().load().catch(() => {});
   }, []);
 
   // Load user-imported fonts (IndexedDB) and register their FontFaces once.
@@ -96,6 +104,8 @@ export function App() {
         >
           {reading ? (
             <ReaderView />
+          ) : view === "collections" ? (
+            <CollectionsView />
           ) : view === "stats" ? (
             <StatsView />
           ) : view === "words" ? (

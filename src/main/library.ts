@@ -246,6 +246,30 @@ export const registerLibraryIpc = (): void => {
 
   ipcMain.handle("library:set-favorite", (_event, id: string, favorite: boolean) => libraryStore.setFavorite(id, favorite));
 
+  // --- Collections ---
+  ipcMain.handle("library:list-collections", () => libraryStore.listCollections());
+
+  ipcMain.handle("library:create-collection", (_event, name: string) =>
+    libraryStore.createCollection({ id: randomUUID(), name: name.trim() || "Untitled collection", createdAt: Date.now() }),
+  );
+
+  ipcMain.handle("library:rename-collection", (_event, id: string, name: string) => libraryStore.renameCollection(id, name.trim() || "Untitled collection"));
+
+  ipcMain.handle("library:remove-collection", (_event, id: string) => {
+    libraryStore.removeCollection(id);
+    return true;
+  });
+
+  ipcMain.handle("library:add-books-to-collection", (_event, id: string, bookIds: string[]) => libraryStore.addBooksToCollection(id, bookIds, Date.now()));
+
+  ipcMain.handle("library:remove-book-from-collection", (_event, id: string, bookId: string) => libraryStore.removeBookFromCollection(id, bookId));
+
+  ipcMain.handle("library:set-collection-books", (_event, id: string, bookIds: string[]) => libraryStore.setCollectionBooks(id, bookIds, Date.now()));
+
+  ipcMain.handle("library:set-book-collections", (_event, bookId: string, collectionIds: string[]) =>
+    libraryStore.setBookCollections(bookId, collectionIds, Date.now()),
+  );
+
   // --- Bookmarks ---
   ipcMain.handle("library:list-bookmarks", (_event, bookId: string) => libraryStore.listBookmarks(bookId));
 

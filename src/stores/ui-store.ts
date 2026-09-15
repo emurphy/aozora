@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
-export type AppView = "library" | "stats" | "words" | "dictionaries" | "settings";
-export type StatusFilter = "all" | "favorites" | "reading" | "finished" | "unread";
+export type AppView = "library" | "collections" | "stats" | "words" | "dictionaries" | "settings";
+export type StatusFilter = "all" | "reading" | "finished" | "unread";
 
 interface UiState {
   view: AppView;
@@ -10,6 +10,9 @@ interface UiState {
   setStatusFilter: (statusFilter: StatusFilter) => void;
   authorFilter: string | null;
   setAuthorFilter: (authorFilter: string | null) => void;
+  /** Collection id the library is narrowed to, or FAVORITES_COLLECTION_ID. */
+  collectionFilter: string | null;
+  setCollectionFilter: (collectionFilter: string | null) => void;
   /** Mirrors the native window's fullscreen state (source of truth: main process). */
   fullscreen: boolean;
   setFullscreen: (fullscreen: boolean) => void;
@@ -18,7 +21,7 @@ interface UiState {
 /**
  * Top-level navigation + library filter state. The reader is driven separately
  * by reader-store; this store picks the non-reader page and holds the sidebar's
- * status/author filters so they survive navigating away and back.
+ * status/author/collection filters so they survive navigating away and back.
  */
 export const useUiStore = create<UiState>((set) => ({
   view: "library",
@@ -28,6 +31,8 @@ export const useUiStore = create<UiState>((set) => ({
   setStatusFilter: (statusFilter) => set({ statusFilter }),
   authorFilter: null,
   setAuthorFilter: (authorFilter) => set({ authorFilter }),
+  collectionFilter: null,
+  setCollectionFilter: (collectionFilter) => set({ collectionFilter }),
 
   fullscreen: false,
   setFullscreen: (fullscreen) => set({ fullscreen }),

@@ -96,4 +96,44 @@ suite("libraryStore (SQLite)", () => {
     libraryStore!.removeBook("del");
     expect(libraryStore!.getBook("del")).toBeNull();
   });
+
+  it("collects books into a shelf and drops them from it", () => {
+    libraryStore!.insertBook(sample({ id: "c-a" }));
+    libraryStore!.insertBook(sample({ id: "c-b" }));
+    libraryStore!.createCollection({ id: "col-1", name: "Series", createdAt: 1 });
+
+    expect(libraryStore!.addBooksToCollection("col-1", ["c-a", "c-b"], 10)!.bookIds).toEqual(["c-a", "c-b"]);
+    expect(libraryStore!.removeBookFromCollection("col-1", "c-a")!.bookIds).toEqual(["c-b"]);
+  });
+
+  it("setBookCollections makes the memberships exact", () => {
+    libraryStore!.insertBook(sample({ id: "s-1" }));
+    libraryStore!.createCollection({ id: "col-x", name: "X", createdAt: 1 });
+    libraryStore!.createCollection({ id: "col-y", name: "Y", createdAt: 2 });
+
+    libraryStore!.setBookCollections("s-1", ["col-x"], 10);
+    libraryStore!.setBookCollections("s-1", ["col-y"], 20);
+    const on = libraryStore!.listCollections().filter((c) => c.bookIds.includes("s-1"));
+    expect(on.map((c) => c.id)).toEqual(["col-y"]);
+  });
+
+  it("setCollectionBooks makes the shelf hold exactly the given books", () => {
+    libraryStore!.insertBook(sample({ id: "b-1" }));
+    libraryStore!.insertBook(sample({ id: "b-2" }));
+    libraryStore!.insertBook(sample({ id: "b-3" }));
+    libraryStore!.createCollection({ id: "col-bulk", name: "Bulk", createdAt: 1 });
+
+    libraryStore!.setCollectionBooks("col-bulk", ["b-1", "b-2"], 10);
+    // b-1 is kept, so it holds its place; b-3 joins at the end.
+    expect(libraryStore!.setCollectionBooks("col-bulk", ["b-1", "b-3"], 20)!.bookIds).toEqual(["b-1", "b-3"]);
+  });
+
+  it("removing a book takes it off every shelf", () => {
+    libraryStore!.insertBook(sample({ id: "gone" }));
+    libraryStore!.createCollection({ id: "col-z", name: "Z", createdAt: 1 });
+    libraryStore!.addBooksToCollection("col-z", ["gone"], 10);
+
+    libraryStore!.removeBook("gone");
+    expect(libraryStore!.getCollection("col-z")!.bookIds).toEqual([]);
+  });
 });

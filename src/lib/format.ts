@@ -39,3 +39,12 @@ export function relativeTime(ts: number | null | undefined): string | null {
   if (mo < 12) return `${mo}mo ago`;
   return `${Math.round(day / 365)}y ago`;
 }
+
+/**
+ * Normalizes a string for search matching: NFKC-folds half/full-width forms
+ * (so 半角ｶﾅ ↔ 全角カナ and ＡＢＣ ↔ ABC match) and strips ALL whitespace,
+ * including the full-width ideographic space U+3000, which JS `\s` covers.
+ */
+export function normalizeSearch(str: string | null | undefined): string {
+  return (str ?? "").normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+}

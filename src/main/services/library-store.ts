@@ -10,6 +10,7 @@ import type {
   Book,
   Bookmark,
   Annotation,
+  Collection,
   ProgressUpdate,
   StatsOverview,
   DailyActivity,
@@ -165,6 +166,22 @@ function getDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_vocab_lookups_vocab ON vocab_lookups(vocab_id);
     CREATE INDEX IF NOT EXISTS idx_vocab_lookups_created ON vocab_lookups(created_at);
+
+    -- User-made shelves (a series, a publisher, whatever). Favorites is not a row
+    -- here: it stays the books.favorite column so existing libraries keep theirs.
+    CREATE TABLE IF NOT EXISTS collections (
+      id         TEXT PRIMARY KEY,
+      name       TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS collection_books (
+      collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+      book_id       TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      added_at      INTEGER NOT NULL,
+      PRIMARY KEY (collection_id, book_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_collection_books_book ON collection_books(book_id);
   `);
 
   runMigrations(db, libraryMigrations);
@@ -208,6 +225,12 @@ interface AnnotationRow {
   note: string | null;
   snippet: string | null;
   progress: number;
+  created_at: number;
+}
+
+interface CollectionRow {
+  id: string;
+  name: string;
   created_at: number;
 }
 
@@ -409,6 +432,8 @@ export const libraryStore = {
       reading_sessions: "id, book_id, started_at, ended_at, duration_ms, chars_read",
       vocab: "id, expression, reading, state, lookup_count, first_at, last_at, mined_at",
       vocab_lookups: "id, vocab_id, book_id, char_offset, surface, sentence, created_at",
+      collections: "id, name, created_at",
+      collection_books: "collection_id, book_id, added_at",
     };
     for (const [table, columns] of Object.entries(canaries)) {
       try {
@@ -520,6 +545,94 @@ export const libraryStore = {
   setFavorite(id: string, favorite: boolean): Book | null {
     stmt("UPDATE books SET favorite = @favorite WHERE id = @id").run({ id, favorite: favorite ? 1 : 0 });
     return this.getBook(id);
+  },
+
+  // --- Collections (user-made shelves; Favorites is the books.favorite column). ---
+
+  /** Every collection with its members, oldest shelf first, members in the order added. */
+  listCollections(): Collection[] {
+    const rows = stmt("SELECT * FROM collections ORDER BY created_at ASC").all() as CollectionRow[];
+    const members = stmt("SELECT collection_id, book_id FROM collection_books ORDER BY added_at ASC").all() as {
+      collection_id: string;
+      book_id: string;
+    }[];
+    const byCollection = new Map<string, string[]>();
+    for (const { collection_id, book_id } of members) {
+      const list = byCollection.get(collection_id);
+      if (list) list.push(book_id);
+      else byCollection.set(collection_id, [book_id]);
+    }
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      createdAt: row.created_at,
+      bookIds: byCollection.get(row.id) ?? [],
+    }));
+  },
+
+  getCollection(id: string): Collection | null {
+    return this.listCollections().find((c) => c.id === id) ?? null;
+  },
+
+  createCollection({ id, name, createdAt }: { id: string; name: string; createdAt: number }): Collection | null {
+    stmt("INSERT INTO collections (id, name, created_at) VALUES (@id, @name, @createdAt)").run({ id, name, createdAt });
+    return this.getCollection(id);
+  },
+
+  renameCollection(id: string, name: string): Collection | null {
+    stmt("UPDATE collections SET name = @name WHERE id = @id").run({ id, name });
+    return this.getCollection(id);
+  },
+
+  removeCollection(id: string): void {
+    stmt("DELETE FROM collections WHERE id = ?").run(id);
+  },
+
+  addBooksToCollection(id: string, bookIds: string[], addedAt: number): Collection | null {
+    const insert = stmt("INSERT OR IGNORE INTO collection_books (collection_id, book_id, added_at) VALUES (?, ?, ?)");
+    getDb().transaction(() => {
+      for (const bookId of bookIds) insert.run(id, bookId, addedAt);
+    })();
+    return this.getCollection(id);
+  },
+
+  removeBookFromCollection(id: string, bookId: string): Collection | null {
+    stmt("DELETE FROM collection_books WHERE collection_id = ? AND book_id = ?").run(id, bookId);
+    return this.getCollection(id);
+  },
+
+  /** Makes a collection hold exactly `bookIds`; books already on it keep their place. */
+  setCollectionBooks(id: string, bookIds: string[], addedAt: number): Collection | null {
+    const keep = new Set(bookIds);
+    getDb().transaction(() => {
+      const current = stmt("SELECT book_id FROM collection_books WHERE collection_id = ?").all(id) as { book_id: string }[];
+      for (const { book_id } of current) {
+        if (!keep.has(book_id)) stmt("DELETE FROM collection_books WHERE collection_id = ? AND book_id = ?").run(id, book_id);
+      }
+      for (const bookId of keep) {
+        stmt("INSERT OR IGNORE INTO collection_books (collection_id, book_id, added_at) VALUES (?, ?, ?)").run(id, bookId, addedAt);
+      }
+    })();
+    return this.getCollection(id);
+  },
+
+  /**
+   * Makes one book's memberships exactly `collectionIds`. Only the differences
+   * are written, so a shelf the book already sits on keeps its added_at (and so
+   * its place in the shelf's order).
+   */
+  setBookCollections(bookId: string, collectionIds: string[], addedAt: number): Collection[] {
+    const keep = new Set(collectionIds);
+    getDb().transaction(() => {
+      const current = stmt("SELECT collection_id FROM collection_books WHERE book_id = ?").all(bookId) as { collection_id: string }[];
+      for (const { collection_id } of current) {
+        if (!keep.has(collection_id)) stmt("DELETE FROM collection_books WHERE collection_id = ? AND book_id = ?").run(collection_id, bookId);
+      }
+      for (const id of keep) {
+        stmt("INSERT OR IGNORE INTO collection_books (collection_id, book_id, added_at) VALUES (?, ?, ?)").run(id, bookId, addedAt);
+      }
+    })();
+    return this.listCollections();
   },
 
   // --- Bookmarks (per book, ordered by reading position). ------------------

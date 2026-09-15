@@ -25,6 +25,7 @@ interface LibraryState {
   loadBooks: () => Promise<void>;
   importBooks: () => Promise<ImportSummary>;
   importDroppedFiles: (fileList: FileList) => Promise<ImportSummary>;
+  setFavorite: (id: string, favorite: boolean) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
   removeBook: (id: string) => Promise<void>;
   updateBook: (id: string, patch: Omit<UpdateBookPayload, "id">) => Promise<Book | null>;
@@ -116,18 +117,22 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     return importPaths(files, set);
   },
 
-  /** Toggles a book's favorite flag optimistically; reverts on IPC failure. */
-  toggleFavorite: async (id) => {
+  /** Writes a book's favorite flag optimistically; reverts on IPC failure. */
+  setFavorite: async (id, favorite) => {
     const book = get().books.find((b) => b.id === id);
-    if (!book) return;
-    const next = !book.favorite;
-    set({ books: get().books.map((b) => (b.id === id ? { ...b, favorite: next } : b)) });
+    if (!book || book.favorite === favorite) return;
+    set({ books: get().books.map((b) => (b.id === id ? { ...b, favorite } : b)) });
     try {
-      await api().setFavorite(id, next);
+      await api().setFavorite(id, favorite);
     } catch (err) {
-      set({ books: get().books.map((b) => (b.id === id ? { ...b, favorite: !next } : b)) });
+      set({ books: get().books.map((b) => (b.id === id ? { ...b, favorite: !favorite } : b)) });
       throw err;
     }
+  },
+
+  toggleFavorite: async (id) => {
+    const book = get().books.find((b) => b.id === id);
+    if (book) await get().setFavorite(id, !book.favorite);
   },
 
   /** Removes a book and its files, then refreshes the list. */

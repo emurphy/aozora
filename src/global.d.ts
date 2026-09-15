@@ -13,6 +13,7 @@ import type {
   BackupResult,
   Book,
   Bookmark,
+  Collection,
   DictionaryImportProgress,
   DictionaryInfo,
   LookupResult,
@@ -63,6 +64,14 @@ export interface LibraryApi {
   readBook(id: string): Promise<Uint8Array>;
   saveProgress(id: string, progress: ProgressUpdate): Promise<Book | null>;
   setFavorite(id: string, favorite: boolean): Promise<Book | null>;
+  listCollections(): Promise<Collection[]>;
+  createCollection(name: string): Promise<Collection | null>;
+  renameCollection(id: string, name: string): Promise<Collection | null>;
+  removeCollection(id: string): Promise<boolean>;
+  addBooksToCollection(id: string, bookIds: string[]): Promise<Collection | null>;
+  removeBookFromCollection(id: string, bookId: string): Promise<Collection | null>;
+  setCollectionBooks(id: string, bookIds: string[]): Promise<Collection | null>;
+  setBookCollections(bookId: string, collectionIds: string[]): Promise<Collection[]>;
   listBookmarks(bookId: string): Promise<Bookmark[]>;
   addBookmark(payload: AddBookmarkPayload): Promise<Bookmark | null>;
   removeBookmark(id: string): Promise<boolean>;

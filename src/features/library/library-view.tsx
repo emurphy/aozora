@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpDown, BookPlus, LayoutGrid, List, Loader2, Search, UploadCloud, X } from "lucide-react";
+import { ArrowUpDown, BookPlus, LayoutGrid, Library, List, Loader2, Search, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BookCard } from "./book-card";
 import { BookRow } from "./book-row";
 import { LibrarySidebar } from "./library-sidebar";
+import { CollectionBooksDialog, type ShelfTarget } from "./collection-dialogs";
 import { useLibraryStore } from "@/stores/library-store";
 import { useReaderStore } from "@/stores/reader-store";
 import { useUiStore } from "@/stores/ui-store";
+import { useCollectionsStore } from "@/stores/collections-store";
 import { useLibraryPrefs, SORT_OPTIONS, type SortKey, type ViewMode, type CardSize } from "@/stores/library-prefs-store";
-import { readingStatus } from "@/lib/format";
-import { isBookFileName, type Book } from "@/lib/types";
+import { normalizeSearch, readingStatus } from "@/lib/format";
+import { FAVORITES_COLLECTION_ID, isBookFileName, type Book } from "@/lib/types";
 
 const STATUS_TABS = [
   { value: "all", label: "All" },
@@ -34,15 +36,6 @@ const SHELF_W: Record<CardSize, string> = {
   medium: "w-35",
   large: "w-44",
 };
-
-/**
- * Normalizes a string for search matching: NFKC-folds half/full-width forms
- * (so 半角ｶﾅ ↔ 全角カナ and ＡＢＣ ↔ ABC match) and strips ALL whitespace,
- * including the full-width ideographic space U+3000, which JS `\s` covers.
- */
-function normalizeSearch(str: string | null | undefined) {
-  return (str ?? "").normalize("NFKC").replace(/\s+/g, "").toLowerCase();
-}
 
 /** Pure sort over a copy, never returned straight from a Zustand selector. */
 function sortBooks(list: Book[], sort: SortKey) {
@@ -98,8 +91,12 @@ export function LibraryView() {
   const setStatusFilter = useUiStore((s) => s.setStatusFilter);
   const authorFilter = useUiStore((s) => s.authorFilter);
   const setAuthorFilter = useUiStore((s) => s.setAuthorFilter);
+  const collectionFilter = useUiStore((s) => s.collectionFilter);
+  const setCollectionFilter = useUiStore((s) => s.setCollectionFilter);
+  const collections = useCollectionsStore((s) => s.collections);
 
   const [search, setSearch] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // dragenter/dragleave fire for every child element, so track depth with a
   // counter to know when the cursor has truly left the drop zone.
@@ -110,13 +107,27 @@ export function LibraryView() {
     loadBooks().catch(() => toast.error("Failed to load library"));
   }, [loadBooks]);
 
-  // Books matching the active status tab + author + search box, then sorted.
+  // The open collection, if any. Favorites is the `favorite` flag, not a row.
+  const collection = useMemo(() => collections.find((c) => c.id === collectionFilter) ?? null, [collections, collectionFilter]);
+  const collectionMembers = useMemo(() => (collection ? new Set(collection.bookIds) : null), [collection]);
+
+  // The shelf on screen, if any, as the book picker wants it. Favorites has no
+  // membership rows, so its members are read off the favorite flag.
+  const shelf = useMemo<ShelfTarget | null>(() => {
+    if (collectionFilter === FAVORITES_COLLECTION_ID) {
+      return { id: FAVORITES_COLLECTION_ID, name: "Favorites", bookIds: books.filter((b) => b.favorite).map((b) => b.id) };
+    }
+    return collection ? { id: collection.id, name: collection.name, bookIds: collection.bookIds } : null;
+  }, [collectionFilter, collection, books]);
+
+  // Books matching the active status tab + collection + author + search box, then sorted.
   const visibleBooks = useMemo(() => {
     const q = normalizeSearch(search);
     const filtered = books.filter((b) => {
-      if (statusFilter === "favorites") {
+      if (statusFilter !== "all" && readingStatus(b) !== statusFilter) return false;
+      if (collectionFilter === FAVORITES_COLLECTION_ID) {
         if (!b.favorite) return false;
-      } else if (statusFilter !== "all" && readingStatus(b) !== statusFilter) {
+      } else if (collectionFilter && !collectionMembers?.has(b.id)) {
         return false;
       }
       if (authorFilter && b.author?.trim() !== authorFilter) return false;
@@ -124,17 +135,17 @@ export function LibraryView() {
       return true;
     });
     return sortBooks(filtered, sort);
-  }, [books, statusFilter, authorFilter, search, sort]);
+  }, [books, statusFilter, collectionFilter, collectionMembers, authorFilter, search, sort]);
 
   // "Continue reading" shelf: up to 10 most-recently-read in-progress books.
   // Only on the unfiltered "All" view so it never duplicates the grid below.
   const continueReading = useMemo(() => {
-    if (statusFilter !== "all" || authorFilter || search.trim()) return [];
+    if (statusFilter !== "all" || authorFilter || collectionFilter || search.trim()) return [];
     return books
       .filter((b) => readingStatus(b) === "reading")
       .sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0))
       .slice(0, 10);
-  }, [books, statusFilter, authorFilter, search]);
+  }, [books, statusFilter, authorFilter, collectionFilter, search]);
 
   // One sticky toast tracking import progress, dismissed when the run ends
   // (final result toast comes from reportImport). Reusing the id updates it in place.
@@ -220,9 +231,9 @@ export function LibraryView() {
       </div>
     );
 
-  const heading =
-    authorFilter ??
-    (statusFilter === "all" ? "All books" : statusFilter === "favorites" ? "Favorites" : STATUS_TABS.find((t) => t.value === statusFilter)?.label);
+  // An empty shelf deserves a way to fill it, not a "clear your filters" nudge.
+  const emptyCollection = shelf?.bookIds.length === 0 && !search.trim() && statusFilter === "all" && !authorFilter;
+  const heading = authorFilter ?? shelf?.name ?? (statusFilter === "all" ? "All books" : STATUS_TABS.find((t) => t.value === statusFilter)?.label);
 
   return (
     <div className="relative flex h-full" onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
@@ -279,6 +290,13 @@ export function LibraryView() {
                 </ToggleGroupItem>
               </ToggleGroup>
 
+              {shelf && (
+                <Button variant="outline" onClick={() => setPickerOpen(true)}>
+                  <BookPlus className="size-4" />
+                  Choose from library
+                </Button>
+              )}
+
               {importButton}
             </div>
           </header>
@@ -320,21 +338,33 @@ export function LibraryView() {
                 <span className="ml-1.5 text-muted-foreground/70 tabular-nums">({visibleBooks.length})</span>
               </h2>
               {visibleBooks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                  <Search className="size-7 text-muted-foreground/60" strokeWidth={1.5} />
-                  <p className="text-xs text-muted-foreground">No books match your filters.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSearch("");
-                      setStatusFilter("all");
-                      setAuthorFilter(null);
-                    }}
-                  >
-                    Clear filters
-                  </Button>
-                </div>
+                emptyCollection ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                    <Library className="size-7 text-muted-foreground/60" strokeWidth={1.5} />
+                    <p className="text-xs text-muted-foreground">Nothing in this collection yet.</p>
+                    <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+                      <BookPlus className="size-3.5" />
+                      Choose from library
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                    <Search className="size-7 text-muted-foreground/60" strokeWidth={1.5} />
+                    <p className="text-xs text-muted-foreground">No books match your filters.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearch("");
+                        setStatusFilter("all");
+                        setAuthorFilter(null);
+                        setCollectionFilter(null);
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  </div>
+                )
               ) : (
                 renderBooks(visibleBooks)
               )}
@@ -342,6 +372,8 @@ export function LibraryView() {
           </div>
         )}
       </div>
+
+      <CollectionBooksDialog shelf={shelf} open={pickerOpen} onOpenChange={setPickerOpen} />
     </div>
   );
 }

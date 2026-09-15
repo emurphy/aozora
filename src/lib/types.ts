@@ -52,6 +52,25 @@ export interface Annotation {
   createdAt: number;
 }
 
+/**
+ * A user-made shelf of books: a series, a publisher, anything. Membership rides
+ * along with the row (a library is small enough to ship whole), so the renderer
+ * filters the grid and ticks menu items without a second call.
+ */
+export interface Collection {
+  id: string;
+  name: string;
+  createdAt: number;
+  bookIds: string[];
+}
+
+/**
+ * The built-in shelf. Backed by the `books.favorite` column rather than a
+ * `collections` row, so libraries that already have favorites keep them; it is
+ * only shown alongside the real collections.
+ */
+export const FAVORITES_COLLECTION_ID = "favorites";
+
 /** A file chosen via the native picker. */
 export interface PickedFile {
   path: string;
