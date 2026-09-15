@@ -2,8 +2,8 @@ import { Search, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { relativeTime } from "@/lib/format";
 import { VOCAB_STATES, type VocabEntry, type VocabOccurrence, type VocabState } from "@/lib/types";
 import { STATE_LABELS } from "./word-states";
@@ -52,22 +52,19 @@ export function WordSheet({ entry, occurrences, onClose, onSetState, onJump, onL
                 )}
               </div>
 
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                spacing={0}
-                size="sm"
-                value={entry.state}
-                onValueChange={(v) => v && onSetState(entry, v as VocabState)}
-              >
-                {VOCAB_STATES.map((state) => (
-                  <ToggleGroupItem key={state} value={state} className="px-2 text-[11px]">
-                    {STATE_LABELS[state]}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-
               <div className="flex flex-wrap items-center gap-2">
+                <Select value={entry.state} onValueChange={(v) => onSetState(entry, v as VocabState)}>
+                  <SelectTrigger size="sm" className="w-28" aria-label="Word state">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VOCAB_STATES.map((state) => (
+                      <SelectItem key={state} value={state}>
+                        {STATE_LABELS[state]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button size="sm" variant="outline" onClick={() => onLookUp(entry)}>
                   <Search className="size-3.5" />
                   Look up
@@ -76,9 +73,8 @@ export function WordSheet({ entry, occurrences, onClose, onSetState, onJump, onL
                   <Plus className="size-3.5" />
                   Anki
                 </Button>
-                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => onForget(entry)}>
+                <Button size="icon-sm" variant="outline" aria-label="Delete word" onClick={() => onForget(entry)}>
                   <Trash2 className="size-3.5" />
-                  Forget
                 </Button>
               </div>
 

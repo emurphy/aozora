@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { cn } from "cn";
 import { splitOnTerm } from "@/lib/vocab/mark";
-import type { VocabEntry } from "@/lib/types";
+import bookTemplate from "@/assets/book-template.png";
+import type { Book, VocabEntry } from "@/lib/types";
 
-/** Small pieces shared by the words table and the detail sheet. */
+/** Small pieces shared by the words table, the book filter and the detail sheet. */
 
 /** A sentence with every occurrence of the word marked. */
 export function MarkedSentence({ sentence, terms, className }: { sentence: string; terms: (string | null | undefined)[]; className?: string }) {
@@ -18,6 +20,22 @@ export function MarkedSentence({ sentence, terms, className }: { sentence: strin
         ),
       )}
     </span>
+  );
+}
+
+/** A book's cover, sized by the caller. Falls back to the placeholder art. */
+export function BookCover({ book, className }: { book: Book; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [book.coverDataUrl]);
+  return (
+    <img
+      src={!book.coverDataUrl || failed ? bookTemplate : book.coverDataUrl}
+      alt=""
+      title={book.title}
+      onError={() => setFailed(true)}
+      draggable={false}
+      className={cn("bg-muted object-cover", className)}
+    />
   );
 }
 

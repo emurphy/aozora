@@ -642,8 +642,8 @@ export const libraryStore = {
   // --- Vocabulary (words looked up in the reader). --------------------------
 
   /**
-   * Upserts a batch of lookups: each word's counter is bumped and the occurrence
-   * logged. One transaction because the reader flushes a whole reading run at
+   * Upserts a batch of lookups: each new occurrence bumps the word's counter and
+   * is logged. One transaction because the reader flushes a whole reading run at
    * once. Returns the touched words so the popup can show their state.
    */
   recordLookups(items: VocabLookupInput[]): VocabEntry[] {
@@ -656,35 +656,51 @@ export const libraryStore = {
         if (!expression) continue;
         const reading = (item.reading || "").trim();
         const at = item.at || Date.now();
+        const bookId = item.bookId ?? null;
+        const sentence = item.sentence ?? null;
+        const charOffset = item.charOffset ?? null;
 
         // The id only matters when the row is new, so it is minted here rather
         // than by the IPC layer: the caller can't know which branch will run.
         stmt(
           `INSERT INTO vocab (id, expression, reading, state, lookup_count, first_at, last_at)
-                VALUES (@id, @expression, @reading, 'new', 1, @at, @at)
+                VALUES (@id, @expression, @reading, 'new', 0, @at, @at)
            ON CONFLICT(expression, reading) DO UPDATE SET
-                lookup_count = vocab.lookup_count + 1,
-                last_at      = MAX(vocab.last_at, excluded.last_at)`,
+                last_at = MAX(vocab.last_at, excluded.last_at)`,
         ).run({ id: randomUUID(), expression, reading, at });
 
         const id = stmt("SELECT id FROM vocab WHERE expression = @expression AND reading = @reading").get({ expression, reading }) as
           | { id: string }
           | undefined;
         if (!id) continue;
-        touched.add(id.id);
+        const vocabId = id.id;
+        touched.add(vocabId);
+
+        // Meeting the word again in the same sentence is the same sighting, only
+        // more recent: the renderer's dedupe window covers one reading run, this
+        // covers coming back to the passage days later. A lookup with no sentence
+        // (a manual search) has nothing to match on, so it always counts.
+        const same = sentence
+          ? (stmt(
+              `SELECT id FROM vocab_lookups
+                WHERE vocab_id = @vocabId AND book_id IS @bookId AND sentence = @sentence
+                ORDER BY created_at DESC LIMIT 1`,
+            ).get({ vocabId, bookId, sentence }) as { id: string } | undefined)
+          : undefined;
+
+        if (same) {
+          stmt(
+            `UPDATE vocab_lookups SET created_at = MAX(created_at, @at), char_offset = COALESCE(@charOffset, char_offset) WHERE id = @id`,
+          ).run({ id: same.id, at, charOffset });
+          continue;
+        }
 
         stmt(
           `INSERT INTO vocab_lookups (id, vocab_id, book_id, char_offset, surface, sentence, created_at)
                 VALUES (@id, @vocabId, @bookId, @charOffset, @surface, @sentence, @at)`,
-        ).run({
-          id: randomUUID(),
-          vocabId: id.id,
-          bookId: item.bookId ?? null,
-          charOffset: item.charOffset ?? null,
-          surface: item.surface ?? null,
-          sentence: item.sentence ?? null,
-          at,
-        });
+        ).run({ id: randomUUID(), vocabId, bookId, charOffset, surface: item.surface ?? null, sentence, at });
+
+        stmt("UPDATE vocab SET lookup_count = lookup_count + 1 WHERE id = @vocabId").run({ vocabId });
       }
     });
     apply(items);

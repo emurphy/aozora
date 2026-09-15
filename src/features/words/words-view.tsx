@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Languages, Loader2, Search, Trash2, X } from "lucide-react";
+import { Languages, Loader2, MoreVertical, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,16 +14,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuLabel,
-  ContextMenuRadioGroup,
-  ContextMenuRadioItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { LibrarySidebar } from "@/features/library/library-sidebar";
 import { StatCard } from "@/features/stats/stats-widgets";
 import { useLibraryStore } from "@/stores/library-store";
@@ -33,7 +23,9 @@ import { relativeTime } from "@/lib/format";
 import { cn } from "cn";
 import { VOCAB_STATES, type VocabEntry, type VocabOccurrence, type VocabState, type VocabStats } from "@/lib/types";
 import { STATE_LABELS, STATE_STYLES } from "./word-states";
-import { Headword, MarkedSentence } from "./word-bits";
+import { BookCover, Headword, MarkedSentence } from "./word-bits";
+import { BookPicker } from "./book-picker";
+import { WordActionsMenu, WordContextMenu, type WordActions } from "./word-menu";
 import { WordSheet } from "./word-sheet";
 import { LookupPanel } from "./lookup-panel";
 import { mineWord } from "./mine-word";
@@ -120,6 +112,7 @@ export function WordsView() {
   }, [refresh]);
 
   const visible = useMemo(() => sortWords(rows, sort), [rows, sort]);
+  const booksById = useMemo(() => new Map(books.map((book) => [book.id, book])), [books]);
 
   const openDetail = async (entry: VocabEntry) => {
     setDetail(entry);
@@ -161,6 +154,16 @@ export function WordsView() {
 
   const lookUp = (word: string) => setLookup({ open: true, word });
 
+  const wordActions: WordActions = {
+    onDetails: (entry) => void openDetail(entry),
+    onLookUp: (entry) => lookUp(entry.expression),
+    onSetState: (entry, state) => void setOneState(entry, state),
+    onMine: (entry) => void mineOne(entry),
+    onDelete: setConfirmForget,
+    miningId,
+    ankiReady,
+  };
+
   const empty = !loading && !rows.length;
   const unfiltered = stateFilter === "all" && bookFilter === "all" && !query;
 
@@ -194,35 +197,21 @@ export function WordsView() {
                 )}
               </div>
 
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                spacing={0}
-                value={stateFilter}
-                onValueChange={(v) => v && setStateFilter(v as VocabState | "all")}
-              >
-                <ToggleGroupItem value="all">All</ToggleGroupItem>
-                {VOCAB_STATES.map((state) => (
-                  <ToggleGroupItem key={state} value={state}>
-                    {STATE_LABELS[state]}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+              <Tabs value={stateFilter} onValueChange={(v) => setStateFilter(v as VocabState | "all")}>
+                <TabsList>
+                  <TabsTrigger value="all" className="px-3">
+                    All
+                  </TabsTrigger>
+                  {VOCAB_STATES.map((state) => (
+                    <TabsTrigger key={state} value={state} className="px-3">
+                      {STATE_LABELS[state]}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
 
               <div className="ml-auto flex items-center gap-1">
-                <Select value={bookFilter} onValueChange={setBookFilter}>
-                  <SelectTrigger size="default" className="w-44">
-                    <SelectValue placeholder="Any book" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any book</SelectItem>
-                    {books.map((book) => (
-                      <SelectItem key={book.id} value={book.id}>
-                        {book.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <BookPicker books={books} value={bookFilter} onChange={setBookFilter} />
 
                 <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
                   <SelectTrigger size="default" className="w-36">
@@ -268,15 +257,16 @@ export function WordsView() {
                     <th className="w-20 px-2 py-2 font-medium">State</th>
                     <th className="w-14 px-2 py-2 text-right font-medium">Met</th>
                     <th className="w-24 px-2 py-2 font-medium">Last met</th>
-                    <th className="w-40 px-2 py-2 font-medium">Book</th>
+                    <th className="w-14 px-2 py-2 font-medium">Book</th>
                     <th className="px-2 py-2 font-medium">Sentence</th>
-                    <th className="w-8 px-2 py-2" />
+                    <th className="w-12 px-2 py-2" />
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((entry) => (
-                    <ContextMenu key={entry.id}>
-                      <ContextMenuTrigger asChild>
+                  {visible.map((entry) => {
+                    const lastBook = entry.lastBookId ? booksById.get(entry.lastBookId) : undefined;
+                    return (
+                      <WordContextMenu key={entry.id} entry={entry} actions={wordActions}>
                         <tr
                           className="group cursor-pointer border-b border-border/60 align-top hover:bg-muted/40"
                           onClick={() => void openDetail(entry)}
@@ -290,7 +280,7 @@ export function WordsView() {
                           </td>
                           <td className="px-2 py-2 text-right tabular-nums">{entry.lookupCount}</td>
                           <td className="px-2 py-2 text-[11px] text-muted-foreground">{relativeTime(entry.lastAt)}</td>
-                          <td className="truncate px-2 py-2 text-[11px] text-muted-foreground">{entry.lastBookTitle ?? "—"}</td>
+                          <td className="px-2 py-2">{lastBook && <BookCover book={lastBook} className="h-10 w-7" />}</td>
                           <td className="px-2 py-2">
                             {entry.lastSentence && (
                               <MarkedSentence
@@ -300,46 +290,26 @@ export function WordsView() {
                               />
                             )}
                           </td>
-                          <td className="px-2 py-2">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="size-6 text-muted-foreground opacity-0 group-hover:opacity-100"
-                              aria-label={`Forget ${entry.expression}`}
-                              onClick={(e) => {
-                                e.stopPropagation(); // the row itself opens the detail sheet
-                                setConfirmForget(entry);
-                              }}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
+                          <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                            <WordActionsMenu
+                              entry={entry}
+                              actions={wordActions}
+                              trigger={
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  aria-label={`Actions for ${entry.expression}`}
+                                  className="text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                                >
+                                  <MoreVertical className="size-4" />
+                                </Button>
+                              }
+                            />
                           </td>
                         </tr>
-                      </ContextMenuTrigger>
-
-                      <ContextMenuContent>
-                        <ContextMenuItem onSelect={() => void openDetail(entry)}>Details</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => lookUp(entry.expression)}>Look up</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => void navigator.clipboard.writeText(entry.expression)}>Copy word</ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuLabel>Mark as</ContextMenuLabel>
-                        <ContextMenuRadioGroup value={entry.state} onValueChange={(v) => void setOneState(entry, v as VocabState)}>
-                          {VOCAB_STATES.map((state) => (
-                            <ContextMenuRadioItem key={state} value={state}>
-                              {STATE_LABELS[state]}
-                            </ContextMenuRadioItem>
-                          ))}
-                        </ContextMenuRadioGroup>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem disabled={!ankiReady || miningId === entry.id} onSelect={() => void mineOne(entry)}>
-                          Add to Anki
-                        </ContextMenuItem>
-                        <ContextMenuItem variant="destructive" onSelect={() => setConfirmForget(entry)}>
-                          Forget
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  ))}
+                      </WordContextMenu>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -365,7 +335,7 @@ export function WordsView() {
       <AlertDialog open={!!confirmForget} onOpenChange={(open) => !open && setConfirmForget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Forget “{confirmForget?.expression}”?</AlertDialogTitle>
+            <AlertDialogTitle>Delete “{confirmForget?.expression}”?</AlertDialogTitle>
             <AlertDialogDescription>
               This drops the word and its {confirmForget?.lookupCount} recorded sighting{confirmForget?.lookupCount === 1 ? "" : "s"}. Looking it up
               again starts a fresh count.
@@ -373,7 +343,7 @@ export function WordsView() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmForget && void removeWord(confirmForget)}>Forget</AlertDialogAction>
+            <AlertDialogAction onClick={() => confirmForget && void removeWord(confirmForget)}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
