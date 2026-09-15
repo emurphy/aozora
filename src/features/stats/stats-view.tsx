@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, BookCheck, CalendarDays, Clock, Flame, Gauge, Languages, Loader2, Search, Type } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LibrarySidebar } from "@/features/library/library-sidebar";
 import { BookCard } from "@/features/library/book-card";
@@ -13,7 +13,9 @@ import { toDayKey, shiftDay, computeStreaks, formatDuration, formatCompact } fro
 import type { DayValue } from "@/lib/stats/aggregate";
 import type { Stats, VocabStats } from "@/lib/types";
 import { Heatmap, HeatmapLegend } from "./heatmap";
-import { StatCard, BarChart } from "./stats-widgets";
+import { StatsBarChart } from "./charts";
+import type { ChartPoint } from "./charts";
+import { StatCard } from "./stats-widgets";
 import { GoalCard } from "./goal-card";
 import { Milestones } from "./milestones";
 
@@ -84,31 +86,56 @@ export function StatsView() {
     return [...set].sort((a, b) => b - a);
   }, [daily]);
 
-  // Last 30 days, gaps filled with zero, for the daily-rhythm chart.
+  // The plotted number and the y-axis unit both follow the metric toggle; the
+  // tooltip always shows both, so switching never hides a figure.
+  const readingRows = (chars: number, ms: number) => [
+    { label: "Characters", value: formatCompact(chars) },
+    { label: "Time", value: formatDuration(ms) },
+  ];
+  const metricValue = (chars: number, ms: number) => (metric === "minutes" ? ms / 60000 : chars);
+  const metricAxis = (v: number) => (metric === "minutes" ? `${Math.round(v)}m` : formatCompact(v));
+
+  // Last 30 days, gaps filled with zero: the daily-rhythm chart and its header total.
   const trend = useMemo(() => {
-    const arr = [];
+    const points: ChartPoint[] = [];
+    let chars = 0;
+    let ms = 0;
     for (let i = 29; i >= 0; i -= 1) {
       const key = shiftDay(todayKey, -i);
       const v = valueByDay.get(key);
-      const value = metric === "minutes" ? (v?.ms || 0) / 60000 : v?.chars || 0;
-      arr.push({ key, value, tip: `${key} · ${formatCompact(v?.chars || 0)} chars · ${formatDuration(v?.ms || 0)}` });
+      chars += v?.chars || 0;
+      ms += v?.ms || 0;
+      points.push({
+        key,
+        label: key.slice(5).replace("-", "/"),
+        title: key === todayKey ? "Today" : key,
+        value: metricValue(v?.chars || 0, v?.ms || 0),
+        rows: readingRows(v?.chars || 0, v?.ms || 0),
+      });
     }
-    return arr;
+    return { points, total: metric === "minutes" ? formatDuration(ms) : `${formatCompact(chars)} chars` };
   }, [valueByDay, todayKey, metric]);
 
   // 24 hour-of-day buckets.
-  const hourly = useMemo(() => {
-    const buckets = Array.from({ length: 24 }, (_, h) => ({ key: h, value: 0, chars: 0, ms: 0 }));
+  const hourly = useMemo<ChartPoint[]>(() => {
+    const buckets = Array.from({ length: 24 }, (_, hour) => ({ hour, chars: 0, ms: 0 }));
     for (const h of data?.hourly ?? []) {
       const b = buckets[h.hour];
       if (b) {
         b.chars = h.chars || 0;
         b.ms = h.ms || 0;
-        b.value = metric === "minutes" ? (h.ms || 0) / 60000 : h.chars || 0;
       }
     }
-    return buckets.map((b) => ({ ...b, tip: `${String(b.key).padStart(2, "0")}:00 · ${formatCompact(b.chars)} chars · ${formatDuration(b.ms)}` }));
+    return buckets.map((b) => {
+      const hh = String(b.hour).padStart(2, "0");
+      return { key: hh, label: hh, title: `${hh}:00`, value: metricValue(b.chars, b.ms), rows: readingRows(b.chars, b.ms) };
+    });
   }, [data, metric]);
+
+  const peakHour = useMemo(() => {
+    const best = hourly.reduce((top, b) => (b.value > top.value ? b : top), hourly[0]);
+    return best && best.value > 0 ? `Peak ${best.title}` : "";
+  }, [hourly]);
 
   // Join each per-book stat to its library Book; drop stats whose book is gone
   // so we only render real covers.
@@ -129,19 +156,23 @@ export function StatsView() {
   // Vocabulary: words first met per day over the same 30-day window as the
   // reading trend, plus how often a lookup was needed per 1000 characters read.
   const wordsByDay = useMemo(() => new Map((vocab?.daily ?? []).map((d) => [d.day, d.words])), [vocab]);
-  const wordsTrend = useMemo(() => {
-    const arr = [];
+  const wordsTrend = useMemo<ChartPoint[]>(() => {
+    const arr: ChartPoint[] = [];
     for (let i = 29; i >= 0; i -= 1) {
       const key = shiftDay(todayKey, -i);
       const value = wordsByDay.get(key) || 0;
-      arr.push({ key, value, tip: `${key} · ${value} new word${value === 1 ? "" : "s"}` });
+      arr.push({
+        key,
+        label: key.slice(5).replace("-", "/"),
+        title: key === todayKey ? "Today" : key,
+        value,
+        rows: [{ label: "New words", value: String(value) }],
+      });
     }
     return arr;
   }, [wordsByDay, todayKey]);
-  const newWordsThisWeek = useMemo(
-    () => wordsTrend.slice(-7).reduce((sum, day) => sum + day.value, 0),
-    [wordsTrend],
-  );
+  const newWordsThisWeek = useMemo(() => wordsTrend.slice(-7).reduce((sum, day) => sum + day.value, 0), [wordsTrend]);
+  const newWordsThisMonth = useMemo(() => wordsTrend.reduce((sum, day) => sum + day.value, 0), [wordsTrend]);
   const lookupsPerThousand = overview.totalChars > 0 ? ((vocab?.lookupCount ?? 0) / overview.totalChars) * 1000 : 0;
 
   const speedCpm = overview.totalMs > 0 ? Math.round(overview.totalChars / (overview.totalMs / 60000)) : 0;
@@ -199,14 +230,18 @@ export function StatsView() {
                 <div className="flex min-h-7 flex-wrap items-center gap-3">
                   <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Activity</h2>
                   <div className="ml-auto flex items-center gap-2">
-                    <ToggleGroup type="single" variant="outline" spacing={0} size="sm" value={metric} onValueChange={(v) => v && setMetric(v)}>
-                      <ToggleGroupItem value="chars" className="px-2 text-[11px]">
-                        Chars
-                      </ToggleGroupItem>
-                      <ToggleGroupItem value="minutes" className="px-2 text-[11px]">
-                        Minutes
-                      </ToggleGroupItem>
-                    </ToggleGroup>
+                    <Tabs value={metric} onValueChange={setMetric}>
+                      {/* h-7! to sit level with the year Select: the list's own h-8 comes from a
+                          group-data variant, which outranks a plain utility class. */}
+                      <TabsList className="h-7!">
+                        <TabsTrigger value="chars" className="px-2.5 text-[11px]">
+                          Chars
+                        </TabsTrigger>
+                        <TabsTrigger value="minutes" className="px-2.5 text-[11px]">
+                          Minutes
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                     <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
                       <SelectTrigger size="sm" className="w-24">
                         <SelectValue />
@@ -247,32 +282,24 @@ export function StatsView() {
 
             {/* Daily + hourly rhythm. */}
             <section className="grid gap-3 lg:grid-cols-2">
-              <Card size="sm" className="gap-3">
-                <div className="px-3 pt-1">
+              {/* min-w-0: a grid item defaults to min-content, which would stop the chart shrinking. */}
+              <Card size="sm" className="min-w-0 gap-3">
+                <div className="flex items-baseline justify-between gap-2 px-3 pt-1">
                   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Last 30 days</h3>
+                  <span className="text-[11px] tabular-nums text-muted-foreground">{trend.total}</span>
                 </div>
-                <div className="px-3 pb-2">
-                  <BarChart bars={trend} />
-                  <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-                    <span>{trend[0]?.key.slice(5)}</span>
-                    <span>Today</span>
-                  </div>
+                <div className="px-3">
+                  <StatsBarChart data={trend.points} valueFormat={metricAxis} tickInterval={6} />
                 </div>
               </Card>
 
-              <Card size="sm" className="gap-3">
-                <div className="px-3 pt-1">
+              <Card size="sm" className="min-w-0 gap-3">
+                <div className="flex items-baseline justify-between gap-2 px-3 pt-1">
                   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">By hour of day</h3>
+                  <span className="text-[11px] tabular-nums text-muted-foreground">{peakHour}</span>
                 </div>
-                <div className="px-3 pb-2">
-                  <BarChart bars={hourly} />
-                  <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-                    <span>00</span>
-                    <span>06</span>
-                    <span>12</span>
-                    <span>18</span>
-                    <span>23</span>
-                  </div>
+                <div className="px-3">
+                  <StatsBarChart data={hourly} valueFormat={metricAxis} tickInterval={5} />
                 </div>
               </Card>
             </section>
@@ -280,16 +307,13 @@ export function StatsView() {
             {/* Vocabulary: the words looked up while reading (curated on the Words page). */}
             {vocab && vocab.total > 0 && (
               <section className="grid gap-3 lg:grid-cols-3">
-                <Card size="sm" className="gap-3 lg:col-span-2">
-                  <div className="px-3 pt-1">
+                <Card size="sm" className="min-w-0 gap-3 lg:col-span-2">
+                  <div className="flex items-baseline justify-between gap-2 px-3 pt-1">
                     <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">New words, last 30 days</h3>
+                    <span className="text-[11px] tabular-nums text-muted-foreground">{newWordsThisMonth} words</span>
                   </div>
-                  <div className="px-3 pb-2">
-                    <BarChart bars={wordsTrend} />
-                    <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-                      <span>{wordsTrend[0]?.key.slice(5)}</span>
-                      <span>Today</span>
-                    </div>
+                  <div className="px-3">
+                    <StatsBarChart data={wordsTrend} valueFormat={(v) => String(Math.round(v))} tickInterval={6} color="var(--chart-4)" />
                   </div>
                 </Card>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">

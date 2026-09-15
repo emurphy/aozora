@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { cn } from "cn";
 
 interface StatCardProps {
   icon?: LucideIcon;
@@ -22,28 +21,5 @@ export function StatCard({ icon: Icon, label, value, sub }: StatCardProps) {
         {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
       </div>
     </Card>
-  );
-}
-
-export interface Bar {
-  key: string | number;
-  value: number;
-  tip?: string;
-}
-
-/** A compact dependency-free vertical bar chart. */
-export function BarChart({ bars, height = 96 }: { bars: Bar[]; height?: number }) {
-  const max = bars.reduce((m, b) => Math.max(m, b.value), 0);
-  return (
-    <div className="flex items-end gap-px" style={{ height }}>
-      {bars.map((b) => (
-        <div key={b.key} className="group/bar relative flex flex-1 items-end" style={{ height }} title={b.tip}>
-          <div
-            className={cn("w-full rounded-t-[2px] transition-colors", b.value > 0 ? "bg-primary/70 group-hover/bar:bg-primary" : "bg-muted/50")}
-            style={{ height: max > 0 ? `${Math.max(b.value > 0 ? 3 : 0, (b.value / max) * 100)}%` : 0 }}
-          />
-        </div>
-      ))}
-    </div>
   );
 }
