@@ -28,7 +28,11 @@ export const libraryApi = {
   /** Raw bytes (Uint8Array) of a file path, for metadata extraction. */
   readFile: (filePath: string) => ipcRenderer.invoke("library:read-file", filePath),
 
-  /** Copies an .epub into the library and persists metadata + cover. */
+  /**
+   * Copies an .epub into the library and persists metadata + cover. A file whose
+   * bytes are already in the library imports nothing and comes back with
+   * `duplicate: true` plus the existing record.
+   */
   addBook: (payload: AddBookPayload) => ipcRenderer.invoke("library:add-book", payload),
 
   /** All books, newest first, each with a coverDataUrl. */

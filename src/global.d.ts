@@ -2,6 +2,7 @@ import type {
   AddAnnotationPayload,
   AddBookmarkPayload,
   AddBookPayload,
+  AddBookResult,
   Annotation,
   AnkiAddResult,
   AnkiEndpoint,
@@ -55,7 +56,7 @@ export interface LibraryApi {
   pickFiles(): Promise<PickedFile[]>;
   getPathForFile(file: File): string;
   readFile(filePath: string): Promise<Uint8Array>;
-  addBook(payload: AddBookPayload): Promise<Book | null>;
+  addBook(payload: AddBookPayload): Promise<AddBookResult>;
   list(): Promise<Book[]>;
   updateBook(payload: UpdateBookPayload): Promise<Book | null>;
   remove(id: string): Promise<boolean>;

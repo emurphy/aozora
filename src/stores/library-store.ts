@@ -12,6 +12,8 @@ interface ImportProgress {
 
 interface ImportSummary {
   added: number;
+  /** Files skipped because the same bytes are already in the library. */
+  duplicate: number;
   failed: string[];
 }
 
@@ -40,6 +42,7 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
   set({ importing: true, importProgress: { current: 0, total: files.length } });
   const failed: string[] = [];
   let added = 0;
+  let duplicate = 0;
   try {
     let done = 0;
     for (const file of files) {
@@ -48,7 +51,7 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
         const bytes = await api().readFile(file.path);
         const blob = new Blob([bytes as BlobPart]);
         const meta = await extractEpubMetadata(blob);
-        await api().addBook({
+        const result = await api().addBook({
           sourcePath: file.path,
           title: meta.title,
           author: meta.author,
@@ -57,7 +60,8 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
           coverMime: meta.coverMime ?? undefined,
           fileSize: file.size,
         });
-        added += 1;
+        if (result.duplicate) duplicate += 1;
+        else added += 1;
       } catch (err) {
         console.error(`Failed to import ${file.name}`, err);
         failed.push(file.name);
@@ -70,7 +74,7 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
   } finally {
     set({ importing: false, importProgress: null });
   }
-  return { added, failed };
+  return { added, duplicate, failed };
 }
 
 /**
@@ -99,7 +103,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   /** Opens the native picker and imports the chosen files; returns a summary for the caller. */
   importBooks: async () => {
     const files = await api().pickFiles();
-    if (!files.length) return { added: 0, failed: [] };
+    if (!files.length) return { added: 0, duplicate: 0, failed: [] };
     return importPaths(files, set);
   },
 
@@ -108,7 +112,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     const files = Array.from(fileList)
       .filter((f) => f.name.toLowerCase().endsWith(".epub"))
       .map((f) => ({ path: api().getPathForFile(f), name: f.name, size: f.size }));
-    if (!files.length) return { added: 0, failed: [] };
+    if (!files.length) return { added: 0, duplicate: 0, failed: [] };
     return importPaths(files, set);
   },
 

@@ -1,10 +1,10 @@
 import { ipcMain, dialog, BrowserWindow } from "electron";
 import path from "node:path";
 import fs from "node:fs";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { libraryStore } from "./services/library-store.js";
 import { resizeCover } from "./cover-image.js";
-import type { Book, AddBookPayload, UpdateBookPayload, ProgressUpdate, AddBookmarkPayload, AddAnnotationPayload, UpdateAnnotationPayload } from "@/lib/types";
+import type { Book, AddBookPayload, AddBookResult, UpdateBookPayload, ProgressUpdate, AddBookmarkPayload, AddAnnotationPayload, UpdateAnnotationPayload } from "@/lib/types";
 
 const COVER_MAX_WIDTH = 300;
 const COVER_JPEG_QUALITY = 90;
@@ -78,6 +78,41 @@ function withCover(book: Book | null): Book | null {
   return { ...book, coverDataUrl: readCoverDataUrl(book.coverPath) };
 }
 
+const HASH_CHUNK = 1 << 20;
+
+/** SHA-256 of a file, read in chunks: a fixed-layout book can be hundreds of MB. */
+function hashFile(filePath: string): string {
+  const hash = createHash("sha256");
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const buf = Buffer.alloc(HASH_CHUNK);
+    let read: number;
+    while ((read = fs.readSync(fd, buf, 0, HASH_CHUNK, null)) > 0) hash.update(buf.subarray(0, read));
+  } finally {
+    fs.closeSync(fd);
+  }
+  return hash.digest("hex");
+}
+
+/**
+ * The book this file was already imported as, or null. Identity is the bytes:
+ * matching on title/author would refuse volumes that share a series title. Size
+ * narrows the candidates first, so a library of hundreds isn't re-hashed per
+ * import, and pre-hash rows are backfilled as they come up as candidates.
+ */
+function findDuplicate(contentHash: string, fileSize: number): Book | null {
+  for (const candidate of libraryStore.booksByFileSize(fileSize)) {
+    let known = candidate.contentHash;
+    if (!known) {
+      if (!fs.existsSync(candidate.filePath)) continue;
+      known = hashFile(candidate.filePath);
+      libraryStore.setContentHash(candidate.id, known);
+    }
+    if (known === contentHash) return libraryStore.getBook(candidate.id);
+  }
+  return null;
+}
+
 export const registerLibraryIpc = (): void => {
   ipcMain.handle("library:pick-files", async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -110,9 +145,16 @@ export const registerLibraryIpc = (): void => {
   });
 
   // Copies the original .epub into the managed library, persists metadata + cover.
-  ipcMain.handle("library:add-book", (_event, payload: AddBookPayload) => {
+  // An identical file already in the library is reported back instead of copied.
+  ipcMain.handle("library:add-book", (_event, payload: AddBookPayload): AddBookResult => {
     const { sourcePath, title, author, language, coverBytes, coverMime, fileSize } = payload;
     assertUserChosen(sourcePath); // copying is a read too
+
+    const size = fileSize ?? fs.statSync(sourcePath).size;
+    const contentHash = hashFile(sourcePath);
+    const existing = findDuplicate(contentHash, size);
+    if (existing) return { book: withCover(existing), duplicate: true };
+
     const id = randomUUID();
     const dir = path.join(libraryStore.getBooksDir(), id);
     fs.mkdirSync(dir, { recursive: true });
@@ -136,10 +178,11 @@ export const registerLibraryIpc = (): void => {
       language: language || null,
       filePath,
       coverPath,
-      fileSize: fileSize ?? fs.statSync(filePath).size,
+      fileSize: size,
       addedAt: Date.now(),
+      contentHash,
     });
-    return withCover(book);
+    return { book: withCover(book), duplicate: false };
   });
 
   ipcMain.handle("library:list", () => libraryStore.listBooks().map(withCover));

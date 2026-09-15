@@ -148,8 +148,9 @@ export function LibraryView() {
     }
   }, [importing, importProgress]);
 
-  const reportImport = ({ added, failed }: { added: number; failed: string[] }) => {
+  const reportImport = ({ added, duplicate, failed }: { added: number; duplicate: number; failed: string[] }) => {
     if (added) toast.success(`Imported ${added} book${added > 1 ? "s" : ""}`);
+    if (duplicate) toast.info(`Skipped ${duplicate} book${duplicate > 1 ? "s" : ""} already in your library`);
     if (failed.length) toast.error(`Could not import: ${failed.join(", ")}`);
   };
 

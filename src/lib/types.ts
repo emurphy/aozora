@@ -71,6 +71,12 @@ export interface AddBookPayload {
   fileSize?: number;
 }
 
+/** `duplicate` ⇒ nothing was imported; `book` is the copy already in the library. */
+export interface AddBookResult {
+  book: Book | null;
+  duplicate: boolean;
+}
+
 export interface UpdateBookPayload {
   id: string;
   title?: string;

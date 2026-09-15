@@ -93,7 +93,8 @@ function getDb(): Database.Database {
       progress            REAL    NOT NULL DEFAULT 0,
       explored_char_count INTEGER NOT NULL DEFAULT 0,
       char_count          INTEGER NOT NULL DEFAULT 0,
-      favorite            INTEGER NOT NULL DEFAULT 0
+      favorite            INTEGER NOT NULL DEFAULT 0,
+      content_hash        TEXT    -- SHA-256 of the .epub; NULL until hashed (see library-migrate-1)
     );
 
     CREATE TABLE IF NOT EXISTS bookmarks (
@@ -185,6 +186,7 @@ interface BookRow {
   explored_char_count: number;
   char_count: number;
   favorite: number;
+  content_hash: string | null;
 }
 
 interface BookmarkRow {
@@ -331,6 +333,14 @@ interface InsertBookInput {
   coverPath?: string | null;
   fileSize?: number | null;
   addedAt: number;
+  contentHash?: string | null;
+}
+
+/** A duplicate-check candidate: enough to hash its file and record the result. */
+export interface BookFileRow {
+  id: string;
+  filePath: string;
+  contentHash: string | null;
 }
 
 interface AddBookmarkInput {
@@ -392,7 +402,7 @@ export const libraryStore = {
    */
   schemaError(): string | null {
     const canaries: Record<string, string> = {
-      books: "id, title, author, language, file_path, cover_path, file_size, added_at, last_opened_at, progress, explored_char_count, char_count, favorite",
+      books: "id, title, author, language, file_path, cover_path, file_size, added_at, last_opened_at, progress, explored_char_count, char_count, favorite, content_hash",
       bookmarks: "id, book_id, char_offset, progress, snippet, created_at",
       annotations: "id, book_id, start_char, end_char, color, note, snippet, progress, created_at",
       reading_sessions: "id, book_id, started_at, ended_at, duration_ms, chars_read",
@@ -443,9 +453,9 @@ export const libraryStore = {
   insertBook(book: InsertBookInput): Book | null {
     stmt(
       `INSERT INTO books
-           (id, title, author, language, file_path, cover_path, file_size, added_at)
+           (id, title, author, language, file_path, cover_path, file_size, added_at, content_hash)
          VALUES
-           (@id, @title, @author, @language, @filePath, @coverPath, @fileSize, @addedAt)`,
+           (@id, @title, @author, @language, @filePath, @coverPath, @fileSize, @addedAt, @contentHash)`,
     ).run({
       id: book.id,
       title: book.title,
@@ -455,8 +465,23 @@ export const libraryStore = {
       coverPath: book.coverPath ?? null,
       fileSize: book.fileSize ?? null,
       addedAt: book.addedAt,
+      contentHash: book.contentHash ?? null,
     });
     return this.getBook(book.id);
+  },
+
+  /**
+   * Books whose .epub is the same size as a candidate import: the cheap filter
+   * in front of duplicate detection, so only a plausible match gets hashed.
+   */
+  booksByFileSize(fileSize: number): BookFileRow[] {
+    const rows = stmt("SELECT id, file_path, content_hash FROM books WHERE file_size = ?").all(fileSize) as Pick<BookRow, "id" | "file_path" | "content_hash">[];
+    return rows.map((row) => ({ id: row.id, filePath: row.file_path, contentHash: row.content_hash }));
+  },
+
+  /** Backfills the hash of a book imported before content_hash existed. */
+  setContentHash(id: string, contentHash: string): void {
+    stmt("UPDATE books SET content_hash = @contentHash WHERE id = @id").run({ id, contentHash });
   },
 
   removeBook(id: string): void {

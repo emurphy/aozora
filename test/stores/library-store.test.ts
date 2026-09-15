@@ -26,7 +26,7 @@ beforeEach(() => {
   api = {
     pickFiles: vi.fn(),
     readFile: vi.fn(() => new Uint8Array([1, 2, 3])),
-    addBook: vi.fn((b) => Promise.resolve({ id: "new", ...b })),
+    addBook: vi.fn((b) => Promise.resolve({ book: { id: "new", ...b }, duplicate: false })),
     list: vi.fn(() => Promise.resolve([])),
     remove: vi.fn(() => Promise.resolve(true)),
     getPathForFile: vi.fn((f) => `/drop/${f.name}`),
@@ -56,7 +56,7 @@ describe("importBooks (native picker)", () => {
   it("returns an empty summary when the picker is cancelled", async () => {
     api.pickFiles.mockResolvedValueOnce([]);
     const res = await useLibraryStore.getState().importBooks();
-    expect(res).toEqual({ added: 0, failed: [] });
+    expect(res).toEqual({ added: 0, duplicate: 0, failed: [] });
     expect(api.addBook).not.toHaveBeenCalled();
   });
 
@@ -68,9 +68,19 @@ describe("importBooks (native picker)", () => {
     api.list.mockResolvedValueOnce([{ id: "x" }, { id: "y" }]);
     const res = await useLibraryStore.getState().importBooks();
     expect(api.addBook).toHaveBeenCalledTimes(2);
-    expect(res).toEqual({ added: 2, failed: [] });
+    expect(res).toEqual({ added: 2, duplicate: 0, failed: [] });
     expect(useLibraryStore.getState().books).toHaveLength(2);
     expect(useLibraryStore.getState().importing).toBe(false);
+  });
+
+  it("counts a file main reports as already imported as a duplicate, not an add", async () => {
+    api.pickFiles.mockResolvedValueOnce([
+      { path: "/dupe.epub", name: "dupe.epub", size: 1 },
+      { path: "/fresh.epub", name: "fresh.epub", size: 2 },
+    ]);
+    api.addBook.mockResolvedValueOnce({ book: { id: "existing" }, duplicate: true });
+    const res = await useLibraryStore.getState().importBooks();
+    expect(res).toEqual({ added: 1, duplicate: 1, failed: [] });
   });
 
   it("records a failed file when extraction throws and keeps importing the rest", async () => {
@@ -103,7 +113,7 @@ describe("importDroppedFiles", () => {
 
   it("returns an empty summary when nothing is an epub", async () => {
     const res = await useLibraryStore.getState().importDroppedFiles([{ name: "a.pdf", size: 1 }] as unknown as FileList);
-    expect(res).toEqual({ added: 0, failed: [] });
+    expect(res).toEqual({ added: 0, duplicate: 0, failed: [] });
     expect(api.addBook).not.toHaveBeenCalled();
   });
 });
