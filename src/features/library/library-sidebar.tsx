@@ -53,9 +53,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The app's left rail: brand, status nav, collections, links, and an author
- * browser derived from the books (no stored taxonomy). Owns nav/filter state via
- * the stores so every page renders it unchanged.
+ * The app's left rail: brand, status nav, collections and links. Owns nav/filter
+ * state via the stores so every page renders it unchanged.
  */
 export function LibrarySidebar() {
   const books = useLibraryStore((s) => s.books);
@@ -64,8 +63,6 @@ export function LibrarySidebar() {
   const setView = useUiStore((s) => s.setView);
   const statusFilter = useUiStore((s) => s.statusFilter);
   const setStatusFilter = useUiStore((s) => s.setStatusFilter);
-  const authorFilter = useUiStore((s) => s.authorFilter);
-  const setAuthorFilter = useUiStore((s) => s.setAuthorFilter);
   const collectionFilter = useUiStore((s) => s.collectionFilter);
   const setCollectionFilter = useUiStore((s) => s.setCollectionFilter);
 
@@ -83,22 +80,10 @@ export function LibrarySidebar() {
     return c;
   }, [books]);
 
-  // Authors grouped from the library, most-prolific first.
-  const authors = useMemo(() => {
-    const map = new Map();
-    for (const b of books) {
-      const name = b.author?.trim();
-      if (!name) continue;
-      map.set(name, (map.get(name) || 0) + 1);
-    }
-    return [...map.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ja"));
-  }, [books]);
-
-  /** Every filter row is exclusive: picking one drops the other two. */
-  const browse = ({ status = "all", author = null, collection = null }: { status?: StatusFilter; author?: string | null; collection?: string | null }) => {
+  /** Every filter row is exclusive: picking one drops the other. */
+  const browse = ({ status = "all", collection = null }: { status?: StatusFilter; collection?: string | null }) => {
     setView("library");
     setStatusFilter(status);
-    setAuthorFilter(author);
     setCollectionFilter(collection);
   };
 
@@ -116,7 +101,7 @@ export function LibrarySidebar() {
             icon={item.icon}
             label={item.label}
             count={counts[item.value]}
-            active={inLibrary && statusFilter === item.value && !authorFilter && !collectionFilter}
+            active={inLibrary && statusFilter === item.value && !collectionFilter}
             onClick={() => browse({ status: item.value })}
           />
         ))}
@@ -173,23 +158,6 @@ export function LibrarySidebar() {
         <NavItem icon={BookA} label="Dictionaries" active={view === "dictionaries"} onClick={() => setView("dictionaries")} />
         <NavItem icon={Settings} label="Settings" active={view === "settings"} onClick={() => setView("settings")} />
       </nav>
-
-      {authors.length > 0 && (
-        <div className="flex min-h-0 flex-1 flex-col border-t pt-3">
-          <SectionLabel>Authors</SectionLabel>
-          <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-3 [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:transition-colors hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
-            {authors.map((a) => (
-              <NavItem
-                key={a.name}
-                label={a.name}
-                count={a.count}
-                active={inLibrary && authorFilter === a.name}
-                onClick={() => browse({ author: authorFilter === a.name ? null : a.name })}
-              />
-            ))}
-          </nav>
-        </div>
-      )}
 
       <CollectionFormDialog open={createOpen} onOpenChange={setCreateOpen} />
     </aside>

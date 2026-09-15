@@ -133,7 +133,6 @@ export function CollectionsView() {
   const collections = useCollectionsStore((s) => s.collections);
   const setView = useUiStore((s) => s.setView);
   const setStatusFilter = useUiStore((s) => s.setStatusFilter);
-  const setAuthorFilter = useUiStore((s) => s.setAuthorFilter);
   const setCollectionFilter = useUiStore((s) => s.setCollectionFilter);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -162,7 +161,6 @@ export function CollectionsView() {
 
   const open = (id: string) => {
     setStatusFilter("all");
-    setAuthorFilter(null);
     setCollectionFilter(id);
     setView("library");
   };

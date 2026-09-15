@@ -75,7 +75,9 @@ export function CollectionFormDialog({
       <DialogContent className="sm:max-w-100">
         <DialogHeader>
           <DialogTitle>{collection ? "Rename collection" : "New collection"}</DialogTitle>
-          <DialogDescription>{collection ? "Give this collection a new name." : "Group books any way you like: a series, a publisher, a mood."}</DialogDescription>
+          <DialogDescription>
+            {collection ? "Give this collection a new name." : "Group books any way you like: a series, a publisher, a mood."}
+          </DialogDescription>
         </DialogHeader>
 
         <Input
@@ -155,7 +157,11 @@ function ShelfRow({
   onToggle: () => void;
 }) {
   return (
-    <button type="button" onClick={onToggle} className="flex w-full items-center gap-2.5 px-2 py-2 text-left text-xs transition-colors hover:bg-muted/60">
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-2.5 px-2 py-2 text-left text-xs transition-colors hover:bg-muted/60"
+    >
       <Checkbox checked={checked} tabIndex={-1} className="pointer-events-none" />
       {Icon && <Icon className="size-3.5 shrink-0 text-muted-foreground" />}
       <span className="truncate">{label}</span>
@@ -249,7 +255,12 @@ function PickerTile({ book, checked, onToggle }: { book: Book; checked: boolean;
   return (
     <button type="button" onClick={onToggle} title={book.title} aria-pressed={checked} className="flex flex-col text-left">
       {/* The frame sits outside the cover, so picking a book never nudges the grid. */}
-      <span className={cn("block w-full border p-1 transition-colors", checked ? "border-primary/70 bg-primary/5" : "border-border/60 hover:border-foreground/30")}>
+      <span
+        className={cn(
+          "block w-full border p-1 transition-colors",
+          checked ? "border-primary/40 bg-primary/5" : "border-border/60 hover:border-foreground/30",
+        )}
+      >
         <span className="relative block aspect-2/3 w-full overflow-hidden bg-muted">
           <img
             src={book.coverDataUrl ?? bookTemplate}
@@ -282,7 +293,15 @@ export interface ShelfTarget {
  * written in one call; Favorites has no membership table, so its diff goes out
  * as one favorite flag per changed book.
  */
-export function CollectionBooksDialog({ shelf, open, onOpenChange }: { shelf: ShelfTarget | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+export function CollectionBooksDialog({
+  shelf,
+  open,
+  onOpenChange,
+}: {
+  shelf: ShelfTarget | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const books = useLibraryStore((s) => s.books);
   const setFavorite = useLibraryStore((s) => s.setFavorite);
   const setCollectionBooks = useCollectionsStore((s) => s.setCollectionBooks);

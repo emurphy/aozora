@@ -89,8 +89,6 @@ export function LibraryView() {
 
   const statusFilter = useUiStore((s) => s.statusFilter);
   const setStatusFilter = useUiStore((s) => s.setStatusFilter);
-  const authorFilter = useUiStore((s) => s.authorFilter);
-  const setAuthorFilter = useUiStore((s) => s.setAuthorFilter);
   const collectionFilter = useUiStore((s) => s.collectionFilter);
   const setCollectionFilter = useUiStore((s) => s.setCollectionFilter);
   const collections = useCollectionsStore((s) => s.collections);
@@ -120,7 +118,7 @@ export function LibraryView() {
     return collection ? { id: collection.id, name: collection.name, bookIds: collection.bookIds } : null;
   }, [collectionFilter, collection, books]);
 
-  // Books matching the active status tab + collection + author + search box, then sorted.
+  // Books matching the active status tab + collection + search box, then sorted.
   const visibleBooks = useMemo(() => {
     const q = normalizeSearch(search);
     const filtered = books.filter((b) => {
@@ -130,22 +128,21 @@ export function LibraryView() {
       } else if (collectionFilter && !collectionMembers?.has(b.id)) {
         return false;
       }
-      if (authorFilter && b.author?.trim() !== authorFilter) return false;
       if (q && !(normalizeSearch(b.title) + normalizeSearch(b.author)).includes(q)) return false;
       return true;
     });
     return sortBooks(filtered, sort);
-  }, [books, statusFilter, collectionFilter, collectionMembers, authorFilter, search, sort]);
+  }, [books, statusFilter, collectionFilter, collectionMembers, search, sort]);
 
   // "Continue reading" shelf: up to 10 most-recently-read in-progress books.
   // Only on the unfiltered "All" view so it never duplicates the grid below.
   const continueReading = useMemo(() => {
-    if (statusFilter !== "all" || authorFilter || collectionFilter || search.trim()) return [];
+    if (statusFilter !== "all" || collectionFilter || search.trim()) return [];
     return books
       .filter((b) => readingStatus(b) === "reading")
       .sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0))
       .slice(0, 10);
-  }, [books, statusFilter, authorFilter, collectionFilter, search]);
+  }, [books, statusFilter, collectionFilter, search]);
 
   // One sticky toast tracking import progress, dismissed when the run ends
   // (final result toast comes from reportImport). Reusing the id updates it in place.
@@ -232,8 +229,8 @@ export function LibraryView() {
     );
 
   // An empty shelf deserves a way to fill it, not a "clear your filters" nudge.
-  const emptyCollection = shelf?.bookIds.length === 0 && !search.trim() && statusFilter === "all" && !authorFilter;
-  const heading = authorFilter ?? shelf?.name ?? (statusFilter === "all" ? "All books" : STATUS_TABS.find((t) => t.value === statusFilter)?.label);
+  const emptyCollection = shelf?.bookIds.length === 0 && !search.trim() && statusFilter === "all";
+  const heading = shelf?.name ?? (statusFilter === "all" ? "All books" : STATUS_TABS.find((t) => t.value === statusFilter)?.label);
 
   return (
     <div className="relative flex h-full" onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
@@ -357,7 +354,6 @@ export function LibraryView() {
                       onClick={() => {
                         setSearch("");
                         setStatusFilter("all");
-                        setAuthorFilter(null);
                         setCollectionFilter(null);
                       }}
                     >
