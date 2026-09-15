@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Languages, Loader2, MoreVertical, Search, X } from "lucide-react";
+import { CircleCheck, GraduationCap, Languages, Loader2, MoreVertical, Search, Astroid, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -78,8 +78,8 @@ export function WordsView() {
   const [occurrences, setOccurrences] = useState<VocabOccurrence[]>([]);
   const [miningId, setMiningId] = useState<string | null>(null);
   const [confirmForget, setConfirmForget] = useState<VocabEntry | null>(null);
-  // The lookup panel, optionally seeded with a row's word.
-  const [lookup, setLookup] = useState<{ open: boolean; word: string }>({ open: false, word: "" });
+  // The lookup popup: the word it opens on, and the button it hangs off.
+  const [lookup, setLookup] = useState<{ open: boolean; word: string; anchor: HTMLElement | null }>({ open: false, word: "", anchor: null });
 
   const ankiReady = useAnkiStore((s) => s.enabled && !!s.deck && !!s.model);
 
@@ -152,11 +152,10 @@ export function WordsView() {
     }
   };
 
-  const lookUp = (word: string) => setLookup({ open: true, word });
+  const lookUp = (word: string, anchor: HTMLElement) => setLookup({ open: true, word, anchor });
 
   const wordActions: WordActions = {
     onDetails: (entry) => void openDetail(entry),
-    onLookUp: (entry) => lookUp(entry.expression),
     onSetState: (entry, state) => void setOneState(entry, state),
     onMine: (entry) => void mineOne(entry),
     onDelete: setConfirmForget,
@@ -174,10 +173,10 @@ export function WordsView() {
       <div className="flex min-w-0 flex-1 flex-col overflow-auto">
         <div className="space-y-6 p-6">
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard label="Words" value={stats?.total ?? 0} sub={`${stats?.lookupCount ?? 0} lookups`} />
-            <StatCard label="New today" value={stats?.newToday ?? 0} sub="first met today" />
-            <StatCard label="Learning" value={stats?.byState.learning ?? 0} sub={`${stats?.minedCount ?? 0} in Anki`} />
-            <StatCard label="Known" value={stats?.byState.known ?? 0} sub={`${stats?.byState.new ?? 0} still new`} />
+            <StatCard icon={Languages} label="Words" value={stats?.total ?? 0} sub={`${stats?.lookupCount ?? 0} lookups`} />
+            <StatCard icon={Astroid} label="New today" value={stats?.newToday ?? 0} sub="first met today" />
+            <StatCard icon={GraduationCap} label="Learning" value={stats?.byState.learning ?? 0} sub={`${stats?.minedCount ?? 0} in Anki`} />
+            <StatCard icon={CircleCheck} label="Known" value={stats?.byState.known ?? 0} sub={`${stats?.byState.new ?? 0} still new`} />
           </section>
 
           <div className="space-y-3">
@@ -226,7 +225,7 @@ export function WordsView() {
                   </SelectContent>
                 </Select>
 
-                <Button onClick={() => lookUp("")}>
+                <Button onClick={(e) => lookUp("", e.currentTarget)}>
                   <Search className="size-4" />
                   Look up
                 </Button>
@@ -272,7 +271,7 @@ export function WordsView() {
                           onClick={() => void openDetail(entry)}
                         >
                           <td className="px-2 py-2">
-                            <Headword entry={entry} />
+                            <Headword entry={entry} onLookUp={(anchor) => lookUp(entry.expression, anchor)} />
                           </td>
                           <td className="px-2 py-2">
                             <span className={cn("text-[11px]", STATE_STYLES[entry.state])}>{STATE_LABELS[entry.state]}</span>
@@ -323,14 +322,19 @@ export function WordsView() {
         onClose={() => setDetail(null)}
         onSetState={(entry, state) => void setOneState(entry, state)}
         onJump={jumpTo}
-        onLookUp={(entry) => lookUp(entry.expression)}
+        onLookUp={(entry, anchor) => lookUp(entry.expression, anchor)}
         onMine={(entry) => void mineOne(entry)}
         onForget={setConfirmForget}
         mining={!!miningId}
         ankiReady={ankiReady}
       />
 
-      <LookupPanel open={lookup.open} initialQuery={lookup.word} onOpenChange={(open) => setLookup((prev) => ({ ...prev, open }))} />
+      <LookupPanel
+        open={lookup.open}
+        initialQuery={lookup.word}
+        anchor={lookup.anchor}
+        onOpenChange={(open) => setLookup((prev) => ({ ...prev, open }))}
+      />
 
       <AlertDialog open={!!confirmForget} onOpenChange={(open) => !open && setConfirmForget(null)}>
         <AlertDialogContent>

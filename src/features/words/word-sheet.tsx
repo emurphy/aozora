@@ -16,7 +16,7 @@ interface Props {
   onSetState: (entry: VocabEntry, state: VocabState) => void;
   /** Opens the book at the passage the word was met in. */
   onJump: (occurrence: VocabOccurrence) => void;
-  onLookUp: (entry: VocabEntry) => void;
+  onLookUp: (entry: VocabEntry, anchor: HTMLElement) => void;
   onMine: (entry: VocabEntry) => void;
   onForget: (entry: VocabEntry) => void;
   mining: boolean;
@@ -65,7 +65,7 @@ export function WordSheet({ entry, occurrences, onClose, onSetState, onJump, onL
                     ))}
                   </SelectContent>
                 </Select>
-                <Button size="sm" variant="outline" onClick={() => onLookUp(entry)}>
+                <Button size="sm" variant="outline" onClick={(e) => onLookUp(entry, e.currentTarget)}>
                   <Search className="size-3.5" />
                   Look up
                 </Button>

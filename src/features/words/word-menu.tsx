@@ -1,4 +1,4 @@
-import { Copy, Info, Plus, Search, Tag, Trash2 } from "lucide-react";
+import { Copy, Info, Plus, Tag, Trash2 } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -26,7 +26,6 @@ import { STATE_LABELS } from "./word-states";
 
 export interface WordActions {
   onDetails: (entry: VocabEntry) => void;
-  onLookUp: (entry: VocabEntry) => void;
   onSetState: (entry: VocabEntry, state: VocabState) => void;
   onMine: (entry: VocabEntry) => void;
   onDelete: (entry: VocabEntry) => void;
@@ -70,10 +69,6 @@ function WordMenuItems({ parts, entry, actions }: { parts: MenuParts; entry: Voc
       <Item onSelect={() => actions.onDetails(entry)}>
         <Info />
         Details
-      </Item>
-      <Item onSelect={() => actions.onLookUp(entry)}>
-        <Search />
-        Look up
       </Item>
       <Item onSelect={() => void navigator.clipboard.writeText(entry.expression)}>
         <Copy />

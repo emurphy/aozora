@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import { cn } from "cn";
+import { Button } from "@/components/ui/button";
 import { splitOnTerm } from "@/lib/vocab/mark";
 import bookTemplate from "@/assets/book-template.png";
 import type { Book, VocabEntry } from "@/lib/types";
@@ -39,14 +41,31 @@ export function BookCover({ book, className }: { book: Book; className?: string 
   );
 }
 
-/** The word with its reading on the line below, as the popup showed it. */
-export function Headword({ entry, size = "sm" }: { entry: VocabEntry; size?: "sm" | "lg" }) {
+/** The word with its reading on the line below, as the popup showed it.
+ *  `onLookUp` adds a button beside the pair that opens the dictionary for the word. */
+export function Headword({ entry, size = "sm", onLookUp }: { entry: VocabEntry; size?: "sm" | "lg"; onLookUp?: (anchor: HTMLElement) => void }) {
   const large = size === "lg";
   return (
-    <span className="flex flex-col leading-tight">
-      <span className={cn("font-medium", large ? "text-xl" : "text-sm")}>{entry.expression}</span>
-      {entry.reading && entry.reading !== entry.expression && (
-        <span className={cn("text-muted-foreground", large ? "mt-1 text-xs" : "text-[11px]")}>{entry.reading}</span>
+    <span className="flex items-center gap-1">
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className={cn("font-medium", large ? "text-xl" : "text-sm")}>{entry.expression}</span>
+        {entry.reading && entry.reading !== entry.expression && (
+          <span className={cn("text-muted-foreground", large ? "mt-1 text-xs" : "text-[11px]")}>{entry.reading}</span>
+        )}
+      </span>
+      {onLookUp && (
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label={`Look up ${entry.expression}`}
+          onClick={(e) => {
+            e.stopPropagation(); // the row itself opens the detail sheet
+            onLookUp(e.currentTarget);
+          }}
+          className="text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <Search />
+        </Button>
       )}
     </span>
   );

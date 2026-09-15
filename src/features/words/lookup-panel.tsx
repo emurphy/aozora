@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { DictionaryResult } from "@/features/reader/dictionary-result";
 import { speakVoicevox } from "@/lib/reader/voicevox";
 import { ttsParams, useTtsStore } from "@/stores/tts-store";
@@ -13,8 +13,10 @@ import type { LookupResult } from "@/lib/types";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Word to look up as soon as the panel opens (from a row's context menu). */
+  /** Word to look up as soon as the panel opens (from a row's lookup button). */
   initialQuery?: string;
+  /** Button the popup hangs off. A plain element works as radix's virtual anchor. */
+  anchor?: HTMLElement | null;
 }
 
 /**
@@ -22,7 +24,8 @@ interface Props {
  * reader's hover popup, driven by a typed query. Nothing here is recorded: the
  * words list counts words met while reading, and a deliberate search is not one.
  */
-export function LookupPanel({ open, onOpenChange, initialQuery }: Props) {
+export function LookupPanel({ open, onOpenChange, initialQuery, anchor }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [result, setResult] = useState<LookupResult | null>(null);
   const [searched, setSearched] = useState("");
@@ -64,16 +67,22 @@ export function LookupPanel({ open, onOpenChange, initialQuery }: Props) {
   const empty = !loading && searched && !result?.entries.length && !result?.kanji.length;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Look up a word</DialogTitle>
-          <DialogDescription>Type a Japanese word in any inflected form. Searches here are not added to your words list.</DialogDescription>
-        </DialogHeader>
-
+    // modal: a sheet or context menu may be open underneath, and a non-modal
+    // layer over one dismisses it on the first click inside this popup.
+    <Popover open={open} onOpenChange={onOpenChange} modal>
+      {anchor && <PopoverAnchor virtualRef={{ current: anchor }} />}
+      <PopoverContent
+        align="start"
+        collisionPadding={12}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault(); // radix focuses the panel; the query field is the point
+          inputRef.current?.focus();
+        }}
+        className="flex max-h-[min(34rem,var(--radix-popover-content-available-height))] w-[26rem] flex-col gap-2"
+      >
         <div className="flex items-center gap-2">
           <Input
-            autoFocus
+            ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -89,7 +98,7 @@ export function LookupPanel({ open, onOpenChange, initialQuery }: Props) {
           </Button>
         </div>
 
-        <div className="max-h-[55vh] min-h-24 overflow-y-auto border bg-background">
+        <div className="min-h-24 flex-1 overflow-y-auto border bg-background">
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -102,7 +111,9 @@ export function LookupPanel({ open, onOpenChange, initialQuery }: Props) {
             <p className="px-3 py-10 text-center text-xs text-muted-foreground">Type a word and press Enter.</p>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <p className="text-[10px] text-muted-foreground">Searches here are not added to your words list.</p>
+      </PopoverContent>
+    </Popover>
   );
 }
