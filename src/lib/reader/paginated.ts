@@ -9,10 +9,9 @@
  *     `scrollLeft` (stride = width + gap); trailing partial page pulled in with
  *     `translateX`.
  *
- * Position is character-based (`exploredCharCount`), identical to the continuous
- * reader so mode switches preserve the place. Per section we record each
- * paragraph's leading-edge scroll-axis offset, snap to a page, and keep a
- * `page → first character` map for save/restore.
+ * Position is character-based, as in the continuous reader, so mode switches
+ * preserve the place: per section, a `page → first character` map built from
+ * each paragraph's leading edge.
  */
 
 import { getParagraphNodes, getCharacterCount, countCharacters } from "@/lib/epub/dom-utils";
@@ -22,6 +21,8 @@ export const PAGE_GAP = 40;
 
 export interface PaginatedState {
   char: number;
+  /** Characters read through the end of this page. */
+  charEnd: number;
   page: number;
   totalPages: number;
   sectionIndex: number;
@@ -53,6 +54,22 @@ function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
 
+/**
+ * `page -> characters read through it`. A page that starts no paragraph of its
+ * own holds nothing but the spill-over of the one before, so it ends where the
+ * next page that does start one begins.
+ */
+export function pageEnds(firstChar: (number | undefined)[], sectionChars: number): number[] {
+  const ends = new Array<number>(firstChar.length);
+  let next = sectionChars;
+  for (let p = firstChar.length - 1; p >= 0; p -= 1) {
+    ends[p] = next;
+    const start = firstChar[p];
+    if (start !== undefined) next = start;
+  }
+  return ends;
+}
+
 /** Bounding rect for a paragraph node (text nodes are measured via a Range). */
 function nodeRect(node: Node): DOMRect {
   if (node.nodeType === Node.ELEMENT_NODE) return (node as Element).getBoundingClientRect();
@@ -81,6 +98,7 @@ export class PaginatedController {
   contentH: number;
 
   pageStartChar: number[];
+  pageEndChar: number[];
   sectionAccChar: number[];
   charCount: number;
 
@@ -105,9 +123,9 @@ export class PaginatedController {
 
     // Per-section paragraph stats (recomputed on each section render / reflow).
     this.pageStartChar = [0];
+    this.pageEndChar = [0];
 
-    // Cumulative character count at the end of each section (counting is
-    // layout-independent, so it can run on the detached elements up front).
+    // Counting is layout-independent, so it runs on the detached elements up front.
     this.sectionAccChar = [];
     let acc = 0;
     for (const sec of sections) {
@@ -140,11 +158,14 @@ export class PaginatedController {
     return this.sectionStart + (this.pageStartChar[this.page] || 0);
   }
 
-  /**
-   * Columns per page for the current layout. Vertical (tategaki) is always
-   * single-column; horizontal honours the setting, or scales with the viewport
-   * width when set to auto (`0`), matching the reference reader (~1 col / 1000px).
-   */
+  /** Characters read through the end of the page: progress reports this, so the
+   *  last page of the last section is the whole book. */
+  get exploredCharEnd(): number {
+    return this.sectionStart + (this.pageEndChar[this.page] || 0);
+  }
+
+  /** Columns per page: tategaki is always one; horizontal honours the setting, or
+   *  on auto follows the reference reader at ~1 column per 1000px. */
   _effectiveColumns(): number {
     if (this.vertical) return 1;
     if (this.columns > 0) return this.columns;
@@ -170,9 +191,8 @@ export class PaginatedController {
     el.style.columnGap = `${this.gap}px`;
     el.style.columnFill = "auto";
 
-    // Image-only sections (cover, full-page illustrations) would otherwise sit
-    // flush against the block-start edge (right side in vertical-rl). Centre them
-    // in a flex box filling the viewport, regardless of writing direction.
+    // An image-only section would otherwise sit flush against the block-start
+    // edge; a viewport-filling flex box centres it in either direction.
     if (this._isImageSection(this.sectionIndex)) {
       this._clearTransform();
       el.style.columnWidth = "auto";
@@ -184,8 +204,7 @@ export class PaginatedController {
       return;
     }
 
-    // Restore the multi-column layout (a previous image section may have left
-    // this element as a flex box).
+    // A previous image section may have left this element as a flex box.
     el.style.display = "";
     el.style.alignItems = "";
     el.style.justifyContent = "";
@@ -195,9 +214,8 @@ export class PaginatedController {
       el.style.width = "100%";
       el.style.height = "auto";
     } else {
-      // Pack N columns into one viewport-wide page: N*colW + (N-1)*gap = contentW.
-      // The page stride stays viewport+gap (see `screenSize`), so the next page's
-      // first column lands exactly one screen over.
+      // N columns to a viewport-wide page: N*colW + (N-1)*gap = contentW. The
+      // stride stays viewport+gap, so the next page starts exactly one screen over.
       const cols = this._effectiveColumns();
       const colW = cols > 1 ? (this.contentW - (cols - 1) * this.gap) / cols : this.contentW;
       el.style.columnWidth = `${colW}px`;
@@ -220,10 +238,8 @@ export class PaginatedController {
   }
 
   /**
-   * Measures the currently-rendered section: each paragraph's leading-edge
-   * offset along the scroll axis, the page it snaps to, and the resulting
-   * `page → first character offset` map. Scroll is reset to the origin first so
-   * the offsets are absolute within the section.
+   * Measures the rendered section into the `page → first character` map. Scroll
+   * resets to the origin first, so the offsets are absolute within the section.
    */
   _measure(): void {
     this._resetScroll();
@@ -234,7 +250,7 @@ export class PaginatedController {
     const scrollSize = this.scrollEl[this.scrollSizeProp];
     this.totalPages = Math.max(1, Math.ceil(scrollSize / screen));
 
-    const pageFirstChar: number[] = new Array(this.totalPages);
+    const pageFirstChar = new Array<number | undefined>(this.totalPages);
 
     let acc = 0;
     let prevPos = 0; // a zero-size node (e.g. an empty wrapper) inherits the last edge
@@ -245,9 +261,8 @@ export class PaginatedController {
       const pos = size <= 0 ? prevPos : this.vertical ? r.top - contentRect.top : r.left - contentRect.left;
       prevPos = pos;
 
-      // floor, not round: a paragraph whose leading edge is in the latter half
-      // of a column still *begins* on that column's page. Rounding it forward
-      // would make a search hit inside it jump one page too far.
+      // floor, not round: a paragraph still begins on the page its leading edge
+      // is on, and rounding forward would overshoot a search hit inside it.
       const pg = clamp(Math.floor(pos / screen), 0, this.totalPages - 1);
       if (pageFirstChar[pg] === undefined) pageFirstChar[pg] = acc;
 
@@ -259,14 +274,18 @@ export class PaginatedController {
     this.pageStartChar = new Array(this.totalPages);
     let carry = 0;
     for (let p = 0; p < this.totalPages; p += 1) {
-      if (pageFirstChar[p] === undefined) {
+      const start = pageFirstChar[p];
+      if (start === undefined) {
         this.pageStartChar[p] = carry;
       } else {
-        this.pageStartChar[p] = pageFirstChar[p];
-        carry = pageFirstChar[p];
+        this.pageStartChar[p] = start;
+        carry = start;
       }
     }
     if (this.pageStartChar.length === 0) this.pageStartChar = [0];
+
+    this.pageEndChar = pageEnds(pageFirstChar, acc);
+    if (this.pageEndChar.length === 0) this.pageEndChar = [0];
   }
 
   /** Last page whose first character is at or before `within` (section-local). */
@@ -305,6 +324,7 @@ export class PaginatedController {
   _emit(): void {
     this.onChange({
       char: this.exploredChar,
+      charEnd: this.exploredCharEnd,
       page: this.page,
       totalPages: this.totalPages,
       sectionIndex: this.sectionIndex,
@@ -315,10 +335,8 @@ export class PaginatedController {
   async setSection(index: number, landing?: Landing): Promise<void> {
     index = clamp(index, 0, this.sections.length - 1);
     this.sectionIndex = index;
-    // Hide while swapping + measuring so the user never sees the intermediate
-    // page-0 paint before we scroll to the real landing page (the chapter-switch
-    // "jitter"). visibility keeps layout geometry intact for _measure, unlike
-    // display:none.
+    // Hidden while swapping, or the page-0 paint shows before the landing page.
+    // visibility, not display:none, which would void the geometry _measure needs.
     this.contentEl.style.visibility = "hidden";
     this.contentEl.innerHTML = this.sections[index].outerHTML;
 
@@ -355,9 +373,8 @@ export class PaginatedController {
 
   /** Restores the reader to a global character offset. */
   async restoreToChar(char: number): Promise<void> {
-    // Start of book = section 0, page 0. Skip the search below: cover/front
-    // illustrations are 0-char image sections, so `sectionAccChar <= 0` would
-    // skip past all of them to the first section with text.
+    // Straight to section 0: front illustrations are 0-char sections, which the
+    // search below would skip past to the first section with text.
     if (char <= 0) {
       await this.setSection(0, "start");
       return;

@@ -28,7 +28,8 @@ interface FixedLayoutViewProps {
   bookViewport: Viewport | null;
   renditionSpread: RenditionSpread;
   initialOrdinal: number;
-  onChange?: (firstOrdinal: number, totalPages: number) => void;
+  /** First and last page ordinal on screen (a spread shows two), and the count. */
+  onChange?: (firstOrdinal: number, lastOrdinal: number, totalPages: number) => void;
 }
 
 // Aspect ratio (w/h) at/above which "auto" mode shows a two-page spread: a
@@ -181,15 +182,16 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
   const emit = useCallback(() => {
     if (useSettingsStore.getState().mangaReadingMode === "continuous") {
       if (!pages.length) return;
-      onChange?.(ordinalRef.current, pages.length);
+      onChange?.(ordinalRef.current, ordinalRef.current, pages.length);
       return;
     }
     const views = viewsRef.current;
     if (!views.length) return; // not laid out yet, so don't report a bogus position
     const view = views[viewIndexRef.current];
     const first = view?.items[0]?.ordinal ?? 0;
+    const last = view?.items[view.items.length - 1]?.ordinal ?? first;
     ordinalRef.current = first;
-    onChange?.(first, pages.length);
+    onChange?.(first, last, pages.length);
   }, [onChange, pages.length]);
 
   // Builds one scaled page box (the `.aoz-fxl-page` → transformed `.aoz-fxl-canvas`
@@ -492,7 +494,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
         const ordinal = ordinalAtCenter(boxes, center);
         if (ordinal !== ordinalRef.current) {
           ordinalRef.current = ordinal;
-          onChange?.(ordinal, pages.length);
+          onChange?.(ordinal, ordinal, pages.length);
         }
       });
     };

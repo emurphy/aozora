@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "cn";
 import { ArrowLeft, Bookmark, Highlighter, Images, List, Loader2, Maximize, Minimize, Search, Settings, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useReaderStore } from "@/stores/reader-store";
@@ -22,7 +23,7 @@ import type { RenditionSpread } from "@/lib/epub/opf";
 import type { Section } from "@/lib/epub/generate-html";
 import { buildReaderHtml } from "@/lib/epub/format-html";
 import { getCachedBook, putCachedBook } from "@/lib/reader-cache";
-import { collectAnchors, currentCharAtCenter, scrollToChar, scrollToElementId, type Anchor } from "@/lib/reader/position";
+import { charAtViewEnd, collectAnchors, currentCharAtCenter, scrollToChar, scrollToElementId, type Anchor } from "@/lib/reader/position";
 import { PaginatedController, type PaginatedState } from "@/lib/reader/paginated";
 import { mergeSpreadSections } from "@/lib/reader/merge-spreads";
 import { FixedLayoutView, type FixedLayoutHandle } from "./fixed-layout-view";
@@ -52,8 +53,7 @@ function resolveVertical(mode: WritingMode, bookVertical: boolean): boolean {
   return mode === "auto" ? bookVertical : mode === "vertical";
 }
 
-/** Reflects the furigana mode as a class on the content root; "show" clears it
- *  so the book's own furigana styling applies untouched. */
+/** Furigana mode as a class on the content root; "show" clears it so the book's own styling applies. */
 function applyFuriganaClass(root: Element | null | undefined) {
   if (!root) return;
   root.classList.remove(...FURIGANA_CLASSES);
@@ -61,8 +61,7 @@ function applyFuriganaClass(root: Element | null | undefined) {
   if (mode && mode !== "show") root.classList.add(`aoz-furigana-${mode}`);
 }
 
-/** Click-to-reveal for the toggle/full/partial furigana modes. Delegated on the
- *  persistent content root so it survives paginated section swaps. */
+/** Click-to-reveal furigana, delegated on the content root so it survives section swaps. */
 function bindRubyReveal(root: Element | null | undefined) {
   if (!root) return;
   root.addEventListener("click", (e) => {
@@ -77,11 +76,8 @@ function bindRubyReveal(root: Element | null | undefined) {
 
 /**
  * Reader shell. The book is parsed once (or loaded from the IndexedDB cache) and
- * rendered inside a shadow root so the book's own CSS stays isolated. Continuous
- * and paginated layouts share that parsed content without re-parsing.
- *
- * Reading position is a character offset (exploredCharCount), so it survives
- * re-flow and mode switches; persisted (debounced) and restored on next open.
+ * rendered inside a shadow root so its own CSS stays isolated. Position is a
+ * character offset, so it survives re-flow and mode switches.
  */
 export function ReaderView() {
   const book = useReaderStore((s) => s.currentBook);
@@ -123,6 +119,7 @@ export function ReaderView() {
   const verticalRef = useRef(false);
   const modeRef = useRef<"continuous" | "paginated" | "fixed">(readingMode);
   const charRef = useRef(0);
+  const charEndRef = useRef(0);
   const rafRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const wheelTsRef = useRef(0);
@@ -140,6 +137,8 @@ export function ReaderView() {
   const [vertical, setVertical] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [currentChar, setCurrentChar] = useState(0);
+  // Characters read through the view's far edge, so the last screen reads 100%.
+  const [currentCharEnd, setCurrentCharEnd] = useState(0);
   const [pageInfo, setPageInfo] = useState<{ page: number; totalPages: number } | null>(null); // fixed-layout only
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -149,15 +148,13 @@ export function ReaderView() {
   const [illustrations, setIllustrations] = useState<Illustration[]>([]);
   const [footnote, setFootnote] = useState<{ html: string; anchor: DOMRect } | null>(null);
 
-  // Mirrors whether any reader overlay (panel/gallery) is open, so the global
-  // page-flip key handler can stand down instead of flipping pages behind it.
-  // Assigned below, once the search hook has surfaced its `searchOpen` state.
+  // Any reader overlay open: the page-flip keys stand down instead of flipping
+  // behind it. Assigned below, once the search hook has surfaced `searchOpen`.
   const panelOpenRef = useRef(false);
 
   const total = totalRef.current;
-  // Fixed-layout position is a page ordinal, so the last page (total-1) is 100%;
-  // reflowable position is a character offset out of the total.
-  const progressPct = total ? Math.round((fixedLayout && total > 1 ? currentChar / (total - 1) : currentChar / total) * 100) : 0;
+  // Fixed-layout position is a page ordinal, so its last page (total-1) is 100%.
+  const progressPct = total ? Math.round((fixedLayout && total > 1 ? currentCharEnd / (total - 1) : currentCharEnd / total) * 100) : 0;
 
   // Chapters that carry a TOC label (sub-sections fold into their parent).
   const chapters = useMemo(() => sections.filter((s) => s.label), [sections]);
@@ -171,7 +168,8 @@ export function ReaderView() {
     const totalChars = totalRef.current;
     if (!book || !totalChars) return;
     const exploredCharCount = charRef.current;
-    const progress = Math.min(1, Math.max(0, exploredCharCount / totalChars));
+    // Untouched at the very start, so opening a book does not mark it as read.
+    const progress = exploredCharCount <= 0 ? 0 : Math.min(1, Math.max(0, charEndRef.current / totalChars));
     const fields = {
       exploredCharCount,
       charCount: totalChars,
@@ -184,9 +182,8 @@ export function ReaderView() {
       .catch(() => {});
   }, [book, applyProgress]);
 
-  // Hover dictionary (lookup + popup + Anki mining) and read-aloud (sentence
-  // button + karaoke) both hang off the reader's shadow content; they read
-  // hostRef/modeRef but keep their own timers/refs. Character position stays here.
+  // Hover dictionary and read-aloud both hang off the shadow content and keep
+  // their own timers/refs. Character position stays here.
   const {
     lookup,
     clearLookup,
@@ -232,21 +229,28 @@ export function ReaderView() {
     }
   }, []);
 
-  /** After a continuous-mode jump settles, read the centred character and persist
-   *  it. Run inside a rAF so the scroll has landed before measuring. */
-  const commitContinuousChar = useCallback(() => {
+  /** Reads the continuous reader's position: the centred character (where a
+   *  reopen resumes) and the character its far edge has reached (progress). */
+  const measureContinuous = useCallback((vert = verticalRef.current) => {
     const host = hostRef.current;
     if (!host) return;
-    charRef.current = currentCharAtCenter(host, anchorsRef.current.anchors, verticalRef.current);
+    const { anchors, total: totalChars } = anchorsRef.current;
+    charRef.current = currentCharAtCenter(host, anchors, vert);
+    charEndRef.current = charAtViewEnd(host, anchors, totalChars, vert);
     setCurrentChar(charRef.current);
+    setCurrentCharEnd(charEndRef.current);
+  }, []);
+
+  /** Reads and persists the position after a jump; call inside a rAF so the scroll has landed. */
+  const commitContinuousChar = useCallback(() => {
+    measureContinuous();
     persist();
-  }, [persist]);
+  }, [measureContinuous, persist]);
 
   const clearFootnote = useCallback(() => setFootnote(null), []);
 
-  // Text highlights + notes: list, pending-selection trigger, and colour/note
-  // editor. Char-offset anchored, so the shell repaints on content rebuild and
-  // paginated section swaps via the returned repaintAnnotations.
+  // Text highlights + notes, char-offset anchored: the shell repaints them via
+  // repaintAnnotations after a content rebuild or section swap.
   const {
     annotations,
     annoPopover,
@@ -273,11 +277,12 @@ export function ReaderView() {
     clearFootnote,
   });
 
-  // Receives position updates from the paginated controller.
   const onPagedChange = useCallback(
     (state: PaginatedState) => {
       charRef.current = state.char;
+      charEndRef.current = state.charEnd;
       setCurrentChar(state.char);
+      setCurrentCharEnd(state.charEnd);
       markSession(state.char, "paginated");
       clearLookup(); // the matched run scrolled off the page
       setFootnote(null);
@@ -290,17 +295,18 @@ export function ReaderView() {
     [persist, markSession, clearLookup, repaintAnnotations, closeAnnoPopover, clearAnnoTrigger],
   );
 
-  // Position updates from the fixed-layout viewer: a 0-based page ordinal. Progress
-  // reaches 1 on the last page so finished manga count as read.
+  // Progress reaches 1 on the last page, so finished manga count as read.
   const onFixedChange = useCallback(
-    (ordinal: number, totalPages: number) => {
+    (ordinal: number, endOrdinal: number, totalPages: number) => {
       charRef.current = ordinal;
+      charEndRef.current = endOrdinal;
       totalRef.current = totalPages;
       setCurrentChar(ordinal);
-      setPageInfo({ page: ordinal, totalPages });
+      setCurrentCharEnd(endOrdinal);
+      setPageInfo({ page: endOrdinal, totalPages }); // the page count reads out the last page on screen
       markSession(ordinal, "fixed");
       if (!book || !totalPages) return;
-      const progress = totalPages > 1 ? Math.min(1, ordinal / (totalPages - 1)) : 1;
+      const progress = totalPages > 1 ? Math.min(1, endOrdinal / (totalPages - 1)) : 1;
       const fields = { exploredCharCount: ordinal, charCount: totalPages, progress, lastOpenedAt: Date.now() };
       applyProgress(book.id, fields);
       clearTimeout(saveTimerRef.current);
@@ -347,8 +353,7 @@ export function ReaderView() {
     [jumpToChar, clearLookup, clearSentencePlay, clearAnnoTrigger, closeAnnoPopover],
   );
 
-  // Bookmarks and in-book search hang off the live position refs and jumpToChar;
-  // each owns its own list/query state (loaded + reset per book internally).
+  // Bookmarks and in-book search hang off the live position refs and jumpToChar.
   const { bookmarks, nameInput, setNameInput, computeDefaultName, addBookmark, removeBookmark } = useBookmarks({
     book,
     chapters,
@@ -369,8 +374,7 @@ export function ReaderView() {
 
   panelOpenRef.current = tocOpen || settingsOpen || bookmarksOpen || searchOpen || galleryOpen || annotationsOpen;
 
-  // Fan the reader's mousemove out to both hover gestures; each records the
-  // cursor and scans/reveals per its own modifier.
+  // Both hover gestures need the cursor; each scans per its own modifier.
   const handleMouseMove = (e: React.MouseEvent) => {
     onTtsMouseMove(e);
     onDictMouseMove(e);
@@ -431,8 +435,7 @@ export function ReaderView() {
         parsedRef.current = parsed;
         htmlRef.current = html;
         footnotesRef.current = parsed.fixedLayout ? new Map() : collectFootnotes(html);
-        // Gallery images share the object URLs above, so their lifetime is tied
-        // to this book load (revoked together on unmount/book change).
+        // Gallery images share the object URLs above, revoked on the next book load.
         setIllustrations(parsed.fixedLayout ? [] : collectIllustrations(parsed.elementHtml, keyToUrl));
         const initialVertical = resolveVertical(useSettingsStore.getState().writingMode, parsed.vertical);
         verticalRef.current = initialVertical;
@@ -459,14 +462,13 @@ export function ReaderView() {
   }, [book]);
 
   // --- Render: (re)build the shadow content for the current mode. ------------
-  // Runs when parsed content becomes ready and whenever the reading mode toggles,
-  // never re-parsing, only re-laying-out, carrying the character position.
+  // Runs when parsed content is ready and when the mode toggles: re-lays-out,
+  // never re-parses, and carries the character position over.
   useEffect(() => {
     const parsed = parsedRef.current;
     if (!parsed) return;
 
-    // Fixed-layout renders through <FixedLayoutView>, which owns its own shadow
-    // DOM and navigation. Nothing to build here, just mark it ready.
+    // <FixedLayoutView> owns its own shadow DOM and navigation: nothing to build.
     if (parsed.fixedLayout) {
       modeRef.current = "fixed";
       readyRef.current = true;
@@ -499,8 +501,7 @@ export function ReaderView() {
 
       const temp = document.createElement("div");
       temp.innerHTML = html;
-      // Mixed books: merge paired fixed-layout image pages into one spread
-      // section so the controller renders them side by side on a single page.
+      // Mixed books: merge paired image pages so a spread renders on one page.
       mergeSpreadSections(temp, parsed.spreadPairs, parsed.ppd);
       const sectionEls = Array.from(temp.children);
 
@@ -533,8 +534,7 @@ export function ReaderView() {
       requestAnimationFrame(() => {
         if (cancelled) return;
         restoreContinuous(vert);
-        charRef.current = currentCharAtCenter(host, anchorsRef.current.anchors, vert);
-        setCurrentChar(charRef.current);
+        measureContinuous(vert);
         readyRef.current = true;
         setStatus("ready");
         repaintAnnotations();
@@ -555,9 +555,8 @@ export function ReaderView() {
       if (shadow) shadow.innerHTML = "";
     };
     // Content arrives via parseToken + the refs above; the omitted callbacks are
-    // stable, so re-running on them would only re-layout. writingMode is here so
-    // toggling text direction rebuilds the shadow content (position is char-based,
-    // so it's preserved across the rebuild via charRef).
+    // stable. writingMode is here so toggling direction rebuilds the content
+    // (charRef carries the position across).
   }, [parseToken, readingMode, writingMode]);
 
   // Apply font/theme settings live, and re-flow to keep the reading position.
@@ -568,8 +567,7 @@ export function ReaderView() {
     applyFuriganaClass(host.shadowRoot?.querySelector(".aozora-content"));
     if (!readyRef.current) return;
     if (modeRef.current === "paginated") {
-      // Column count change re-flows the multi-column layout; refresh re-measures
-      // and lands back on the current character.
+      // A column-count change re-flows the layout; refresh lands back on the character.
       if (controllerRef.current) controllerRef.current.columns = pageColumns;
       controllerRef.current?.refresh();
       return;
@@ -589,8 +587,7 @@ export function ReaderView() {
     controllerRef.current?.flipPage(-1);
   }, [clearSentencePlay]);
 
-  // Keyboard navigation for the page-flip reader. The fixed-layout viewer owns
-  // its own key handling, so the reflowable handler stands down for manga.
+  // Page-flip keys; the fixed-layout viewer owns its own, so this stands down for manga.
   useEffect(() => {
     if (fixedLayout || readingMode !== "paginated") return;
     const onKey = (e: KeyboardEvent) => {
@@ -630,8 +627,7 @@ export function ReaderView() {
     return () => window.removeEventListener("keydown", onKey);
   }, [fixedLayout, readingMode, flipNext, flipPrev]);
 
-  // Recompute the continuous character offset at the viewport centre
-  // (rAF-throttled) and debounce a save.
+  // Re-read the continuous position (rAF-throttled) and debounce a save.
   const handleScroll = () => {
     if (modeRef.current !== "continuous") return;
     clearLookup(); // the matched run scrolled away
@@ -644,8 +640,7 @@ export function ReaderView() {
       rafRef.current = 0;
       const host = hostRef.current;
       if (!host || !anchorsRef.current.anchors.length) return;
-      charRef.current = currentCharAtCenter(host, anchorsRef.current.anchors, verticalRef.current);
-      setCurrentChar(charRef.current);
+      measureContinuous();
       markSession(charRef.current, "continuous");
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(persist, 800);
@@ -693,15 +688,14 @@ export function ReaderView() {
     }
   };
 
-  // Follow internal links in either mode. No click-to-flip (wheel/arrows only),
-  // so text stays freely selectable.
+  // Follow internal links in either mode. No click-to-flip, so text stays selectable.
   const handleContentClick = (e: React.MouseEvent) => {
     const path = (e.nativeEvent.composedPath?.() || []) as Element[];
     const anchor = path.find((n) => n?.tagName === "A");
     const href = anchor?.getAttribute("href");
 
-    // Links out of the book go to the system browser: following one here would
-    // navigate the app's own frame away. Other schemes are swallowed, not followed.
+    // Following an external link here would navigate the app's own frame away, so
+    // hand it to the system browser; other schemes are swallowed.
     if (href && /^[a-z][a-z0-9+.-]*:/i.test(href)) {
       e.preventDefault();
       if (/^https?:\/\//i.test(href)) void window.electronAPI.window.openExternal(href);
@@ -726,19 +720,17 @@ export function ReaderView() {
       return;
     }
 
-    // Not a link: hand off to the highlights hook, which opens the editor if the
-    // click landed on an existing highlight (and no selection is active).
+    // Not a link: the highlights hook opens the editor if the click landed on one.
     openHighlightAtPoint(e);
   };
 
-  // A content rebuild or mode switch invalidates the open note anchor box (the
-  // highlights hook drops its own popover/trigger on the same trigger).
+  // A content rebuild or mode switch invalidates the open note's anchor box.
   useEffect(() => {
     setFootnote(null);
   }, [parseToken, readingMode]);
 
-  // F11 toggles native fullscreen. Leaving the reader drops it so the user can't
-  // get stuck with the title bar hidden on a page that has no toggle.
+  // F11 toggles native fullscreen; leaving the reader drops it, or the title bar
+  // stays hidden on a page with no toggle.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "F11") {
@@ -834,16 +826,17 @@ export function ReaderView() {
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
             onMouseLeave={onDictMouseLeave}
-            className={
+            className={cn(
               paged
-                ? // Padding lives on the host (outside the shadow scroller) so it
-                  // never disturbs the page-flip arithmetic; the scroller measures
-                  // its own client box, so columns inset to match.
+                ? // Padding lives on the host, outside the shadow scroller, so it never
+                  // disturbs the page-flip arithmetic; the scroller insets columns to match.
                   "h-full w-full overflow-hidden py-8 px-8"
                 : vertical
                   ? "h-full w-full overflow-x-auto overflow-y-hidden"
-                  : "h-full w-full overflow-y-auto overflow-x-hidden"
-            }
+                  : "h-full w-full overflow-y-auto overflow-x-hidden",
+              // The progress bar reports the position; with it off the scrollbar is the only cue left.
+              !paged && progressBar !== "off" && "no-scrollbar",
+            )}
           />
         )}
         <DictionaryPopup
@@ -888,6 +881,7 @@ export function ReaderView() {
       <ReaderProgress
         mode={progressBar}
         char={currentChar}
+        charEnd={currentCharEnd}
         total={total}
         fixedLayout={fixedLayout}
         chapters={chapters}

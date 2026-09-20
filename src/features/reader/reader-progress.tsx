@@ -8,7 +8,7 @@ import type { Section } from "@/lib/epub/generate-html";
 import type { Annotation, Bookmark } from "@/lib/types";
 import type { ProgressBarMode } from "@/stores/settings-store";
 
-/** A drop within this fraction of the track snaps to the chapter start (hold Alt to place freely). */
+/** A drop this close to a chapter start snaps to it (Alt to place freely). */
 const SNAP_RATIO = 0.012;
 /** Auto mode: the pointer this close to the window's bottom edge reveals the bar. */
 const REVEAL_PX = 96;
@@ -20,42 +20,42 @@ const SETTLE_MS = 1200;
 const MIN_AVG_MS = 600_000;
 const MIN_AVG_CHARS = 2000;
 
-/** True while the seek bar holds keyboard focus, so page-flip key handlers can
- *  stand down and leave the arrows to the slider. */
+/** True while the seek bar holds focus, so page-flip keys leave the arrows to it. */
 export function isScrubFocused(): boolean {
   return !!document.activeElement?.closest("[data-aoz-scrub]");
 }
 
 interface ReaderProgressProps {
   mode: ProgressBarMode;
-  /** Character offset, or the page ordinal for a fixed-layout book. */
+  /** Start of the view: names the chapter. */
   char: number;
+  /** Characters read through the view's far edge: where the handle sits. */
+  charEnd: number;
   /** Total characters, or the page count for a fixed-layout book. */
   total: number;
   fixedLayout: boolean;
   chapters: Section[];
   bookmarks: Bookmark[];
   annotations: Annotation[];
-  /** Page ordinal + count, for fixed-layout books; reflowable pages are per
-   *  section, which says nothing about where you are in the book. */
+  /** Fixed-layout only, and the last page on screen (a spread shows two):
+   *  reflowable pages are per section, so they say nothing about the book. */
   pageInfo: { page: number; totalPages: number } | null;
-  /** Books that read right to left (tategaki, RTL manga): the track runs the same way. */
+  /** Right-to-left books (tategaki, RTL manga): the track runs the same way. */
   inverted: boolean;
   speed: () => number | null;
   onSeek: (char: number) => void;
 }
 
 /**
- * The reader's bottom seek bar: position, chapter, and a scrub handle.
- *
- * Runs on the reader's character-offset model, so one bar serves continuous,
- * paginated and fixed-layout books (there `char` is a page ordinal, and the last
- * page is 100%). Dragging only previews: the seek fires on release, because a
- * paginated jump re-lays-out a whole section and can't follow the pointer.
+ * The reader's bottom seek bar: position, chapter, and a scrub handle. Runs on
+ * the character-offset model, so one bar serves all three modes (fixed-layout
+ * counts pages instead). Dragging only previews: the seek fires on release,
+ * because a paginated jump re-lays-out a whole section and can't follow.
  */
 export function ReaderProgress({
   mode,
   char,
+  charEnd,
   total,
   fixedLayout,
   chapters,
@@ -79,26 +79,22 @@ export function ReaderProgress({
 
   // A fixed-layout book is read out, so its last page (total - 1) is 100%.
   const max = Math.max(1, fixedLayout && total > 1 ? total - 1 : total);
-  const display = Math.min(max, scrub ?? char);
+  const display = Math.min(max, scrub ?? charEnd);
   const pct = Math.round((display / max) * 100);
   // Chapter offsets are character counts, which image-only pages don't have.
   const marked = !fixedLayout && !!chapters.length;
 
-  // Track coordinates run backwards for right-to-left books; the mapping is its
-  // own inverse, so one helper covers both directions.
+  // RTL tracks run backwards; the mapping is its own inverse, so one helper does both.
   const flip = useCallback((ratio: number) => (inverted ? 1 - ratio : ratio), [inverted]);
 
-  // A seek reports back the start of the page (continuous: the paragraph) it
-  // landed in, which is a little behind where the handle was dropped. Keep
-  // showing the drop through that reply, and hand the handle back to the reader
-  // on the next move, so it never steps backwards on its own.
+  // A seek reports back the view it landed in, a little off the drop. Hold the
+  // drop through that reply so the handle never jumps on its own.
   useEffect(() => {
     if (draggingRef.current || Date.now() < settleUntilRef.current) return;
     setScrub(null);
-  }, [char]);
+  }, [char, charEnd]);
 
-  // Auto mode: the bar overlays the page and stays out of the way until the
-  // pointer comes down to it.
+  // Auto mode: the bar overlays the page until the pointer comes down to it.
   useEffect(() => {
     if (mode !== "auto") return;
     let timer: ReturnType<typeof setTimeout>;
@@ -124,8 +120,8 @@ export function ReaderProgress({
     };
   }, [mode]);
 
-  // Reading speed for the estimate: the live session when it's long enough to
-  // trust, else the all-time average. Characters only, so manga has neither.
+  // Estimate speed: the live session once it's long enough to trust, else the
+  // all-time average. Characters only, so manga has neither.
   useEffect(() => {
     if (fixedLayout) return;
     const id = setInterval(() => setLiveCpm(speed()), SPEED_POLL_MS);
@@ -209,8 +205,8 @@ export function ReaderProgress({
 
   const body = (
     <div className="flex items-center gap-3 px-4 py-2 text-[11px] text-muted-foreground">
-      <span className="w-40 shrink-0 truncate" title={labelAt(display)}>
-        {labelAt(display)}
+      <span className="w-40 shrink-0 truncate" title={labelAt(scrub ?? char)}>
+        {labelAt(scrub ?? char)}
       </span>
 
       <div
@@ -225,8 +221,7 @@ export function ReaderProgress({
         }}
         onPointerEnter={() => (holdRef.current = true)}
         onPointerUp={() => {
-          // Hand the arrow keys back to page flipping: the slider keeps them only
-          // when it was tabbed to, not after a click on the track.
+          // Hand the arrows back to page flipping: the slider keeps them only when tabbed to.
           const active = document.activeElement;
           if (active instanceof HTMLElement && barRef.current?.contains(active)) active.blur();
         }}

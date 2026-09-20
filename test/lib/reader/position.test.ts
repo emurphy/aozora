@@ -1,10 +1,7 @@
 // @vitest-environment jsdom
 //
-// Only collectAnchors is unit-testable here: it derives character offsets from
-// the DOM and is layout-independent. The scroll/centre helpers
-// (currentCharAtCenter, scrollToChar, scrollToElementId) depend on real
-// getBoundingClientRect geometry that jsdom does not compute, so they need a
-// browser-level harness and are not covered here.
+// Only collectAnchors: it is layout-independent. The scroll/measure helpers need
+// real getBoundingClientRect geometry, which jsdom does not compute.
 import { describe, it, expect } from "vitest";
 import { collectAnchors } from "@/lib/reader/position";
 

@@ -1,11 +1,9 @@
 /**
  * Reading-position helpers for the continuous reader.
  *
- * Character-based model (`exploredCharCount`): counting Japanese characters
- * before the reading point lets progress survive re-flow (font/size changes)
- * regardless of pixel layout. Anchors map cumulative char offsets to elements;
- * the reading point is the viewport centre, which works the same for vertical-rl
- * (horizontal scroll) and horizontal-tb (vertical scroll).
+ * Position is a character count, not a pixel offset, so it survives re-flow.
+ * Anchors map cumulative char offsets to elements; the resume point is the
+ * viewport centre, which reads the same for vertical-rl and horizontal-tb.
  */
 
 import { getParagraphNodes, getCharacterCount } from "@/lib/epub/dom-utils";
@@ -16,10 +14,8 @@ export interface Anchor {
 }
 
 /**
- * Walks the rendered content in document order and returns an ordered list of
- * `{ el, charBefore }` anchors plus the total character count. `charBefore` is
- * the cumulative character count before the anchor element, so the array is
- * non-decreasing in `charBefore`, which both lookups below binary-search.
+ * Anchors in document order: `charBefore` is the cumulative character count
+ * before the element, so the array is non-decreasing and binary-searchable.
  */
 export function collectAnchors(contentEl: Element): { anchors: Anchor[]; total: number } {
   const nodes = getParagraphNodes(contentEl);
@@ -48,16 +44,8 @@ function viewportCentre(host: HTMLElement): { hr: DOMRect; x: number; y: number 
   };
 }
 
-/**
- * The character offset at the viewport centre, i.e. the reader's current
- * `exploredCharCount`. Binary-searches anchors on the reading-direction axis
- * (right→left x for vertical, top→bottom y for horizontal).
- */
-export function currentCharAtCenter(host: HTMLElement, anchors: Anchor[], vertical: boolean): number {
-  if (!anchors.length) return 0;
-  const { x, y } = viewportCentre(host);
-  const target = vertical ? -x : y;
-
+/** Last anchor starting at or before `target`, on the reading-order axis. */
+function lastAnchorBefore(anchors: Anchor[], vertical: boolean, target: number): number {
   let lo = 0;
   let hi = anchors.length - 1;
   let best = 0;
@@ -65,15 +53,35 @@ export function currentCharAtCenter(host: HTMLElement, anchors: Anchor[], vertic
     const mid = (lo + hi) >> 1;
     const r = anchors[mid].el.getBoundingClientRect();
     // Reading-order coordinate, monotonically non-decreasing across anchors.
-    const primary = vertical ? -r.right : r.top;
-    if (primary <= target) {
+    const leading = vertical ? -r.right : r.top;
+    if (leading <= target) {
       best = mid;
       lo = mid + 1;
     } else {
       hi = mid - 1;
     }
   }
-  return anchors[best].charBefore;
+  return best;
+}
+
+/** The character offset at the viewport centre: where a reopen resumes. */
+export function currentCharAtCenter(host: HTMLElement, anchors: Anchor[], vertical: boolean): number {
+  if (!anchors.length) return 0;
+  const { x, y } = viewportCentre(host);
+  return anchors[lastAnchorBefore(anchors, vertical, vertical ? -x : y)].charBefore;
+}
+
+/**
+ * Characters read through the paragraph at the viewport's far edge. Progress
+ * reports this rather than the centre, so the last screen of a book that is
+ * barely longer than one screen still reads 100%.
+ */
+export function charAtViewEnd(host: HTMLElement, anchors: Anchor[], total: number, vertical: boolean): number {
+  if (!anchors.length) return 0;
+  const hr = host.getBoundingClientRect();
+  const far = vertical ? -hr.left : hr.top + host.clientHeight;
+  const i = lastAnchorBefore(anchors, vertical, far);
+  return i + 1 < anchors.length ? anchors[i + 1].charBefore : total;
 }
 
 function alignToCenter(host: HTMLElement, el: Element, vertical: boolean): void {
@@ -86,10 +94,7 @@ function alignToCenter(host: HTMLElement, el: Element, vertical: boolean): void 
   }
 }
 
-/**
- * Scrolls so the anchor containing `targetChar` sits at the viewport centre,
- * mirroring {@link currentCharAtCenter} so save→restore round-trips.
- */
+/** Mirrors {@link currentCharAtCenter}, so save then restore round-trips. */
 export function scrollToChar(host: HTMLElement, anchors: Anchor[], vertical: boolean, targetChar: number): void {
   if (!anchors.length) return;
   let lo = 0;
@@ -107,11 +112,7 @@ export function scrollToChar(host: HTMLElement, anchors: Anchor[], vertical: boo
   alignToCenter(host, anchors[best].el, vertical);
 }
 
-/**
- * Scrolls a TOC target into view, aligning the chapter's leading edge to the
- * viewport's leading edge (right edge for vertical-rl, top for horizontal-tb).
- * Returns whether the target element was found.
- */
+/** Scrolls a TOC target's leading edge to the viewport's. False if the id is absent. */
 export function scrollToElementId(host: HTMLElement, root: Document | ShadowRoot, id: string, vertical: boolean): boolean {
   const el = root.getElementById ? root.getElementById(id) : null;
   if (!el) return false;

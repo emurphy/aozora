@@ -1,12 +1,10 @@
 // @vitest-environment jsdom
 //
-// PaginatedController's rendering (setSection, _measure, flipPage) depends on
-// real multi-column layout + scroll geometry that jsdom does not compute, so it
-// needs a browser-level harness. Covered here: the layout-independent pieces,
-// i.e. the per-section character accounting derived in the constructor, the derived
-// getters, and the page<->character mapping.
+// Only the layout-independent pieces: character accounting, the derived getters
+// and the page<->character mapping. Rendering (setSection, _measure, flipPage)
+// needs multi-column layout + scroll geometry, which jsdom does not compute.
 import { describe, it, expect, vi } from "vitest";
-import { PaginatedController, PAGE_GAP } from "@/lib/reader/paginated";
+import { PaginatedController, PAGE_GAP, pageEnds } from "@/lib/reader/paginated";
 
 function section(html: string) {
   const el = document.createElement("div");
@@ -50,6 +48,32 @@ describe("PaginatedController character accounting", () => {
     c.pageStartChar = [0, 5];
     c.page = 1;
     expect(c.exploredChar).toBe(10);
+  });
+
+  it("exploredCharEnd adds the current page's end to the section start", () => {
+    const c = makeController();
+    c.sectionIndex = 2; // sectionStart 5, section ends at 9
+    c.pageEndChar = [2, 4];
+    c.page = 0;
+    expect(c.exploredCharEnd).toBe(7);
+    c.page = 1;
+    expect(c.exploredCharEnd).toBe(9); // last page of the last section: the whole book
+  });
+});
+
+describe("pageEnds", () => {
+  it("ends each page where the next one starts", () => {
+    expect(pageEnds([0, 10, 25], 40)).toEqual([10, 25, 40]);
+  });
+
+  it("runs a spill-over page (no paragraph of its own) to the section end", () => {
+    // Page 3 holds only the tail of the paragraph that began on page 2, so both
+    // read through to the end: this is the short-book 55% plateau.
+    expect(pageEnds([0, 10, 25, undefined], 40)).toEqual([10, 25, 40, 40]);
+  });
+
+  it("is empty for a section with no pages", () => {
+    expect(pageEnds([], 0)).toEqual([]);
   });
 });
 
