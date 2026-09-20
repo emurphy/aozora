@@ -13,6 +13,7 @@ import { ReaderAnnotations } from "./reader-annotations";
 import { AnnotationPopover } from "./annotation-popover";
 import { AnnotationTrigger } from "./annotation-trigger";
 import { ReaderSearch } from "./reader-search";
+import { ReaderProgress, isScrubFocused } from "./reader-progress";
 import { ReaderGallery } from "./reader-gallery";
 import { collectIllustrations, type Illustration } from "@/lib/reader/illustrations";
 import { applyReaderVars, continuousStyles, paginatedStyles } from "./reader-styles";
@@ -95,7 +96,7 @@ export function ReaderView() {
   const voicevoxServer = useTtsStore((s) => s.voicevoxServer);
 
   // Records reading time / characters for the stats page.
-  const { mark: markSession } = useReadingSession(book?.id);
+  const { mark: markSession, speed: sessionSpeed } = useReadingSession(book?.id);
 
   const fontSize = useSettingsStore((s) => s.fontSize);
   const lineHeight = useSettingsStore((s) => s.lineHeight);
@@ -106,6 +107,7 @@ export function ReaderView() {
   const furiganaMode = useSettingsStore((s) => s.furiganaMode);
   const pageColumns = useSettingsStore((s) => s.pageColumns);
   const sideMargin = useSettingsStore((s) => s.sideMargin);
+  const progressBar = useSettingsStore((s) => s.progressBar);
   const customFonts = useFontsStore((s) => s.customFonts);
   const fullscreen = useUiStore((s) => s.fullscreen);
 
@@ -138,7 +140,7 @@ export function ReaderView() {
   const [vertical, setVertical] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [currentChar, setCurrentChar] = useState(0);
-  const [pageInfo, setPageInfo] = useState<{ page: number; totalPages: number } | null>(null); // paginated mode
+  const [pageInfo, setPageInfo] = useState<{ page: number; totalPages: number } | null>(null); // fixed-layout only
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
@@ -276,7 +278,6 @@ export function ReaderView() {
     (state: PaginatedState) => {
       charRef.current = state.char;
       setCurrentChar(state.char);
-      setPageInfo({ page: state.page, totalPages: state.totalPages });
       markSession(state.char, "paginated");
       clearLookup(); // the matched run scrolled off the page
       setFootnote(null);
@@ -331,6 +332,19 @@ export function ReaderView() {
       requestAnimationFrame(commitContinuousChar);
     },
     [commitContinuousChar],
+  );
+
+  // A seek lands far from what's on screen, so every anchored overlay is stale.
+  const seekToChar = useCallback(
+    (char: number) => {
+      clearLookup();
+      clearSentencePlay();
+      setFootnote(null);
+      clearAnnoTrigger();
+      closeAnnoPopover();
+      jumpToChar(char);
+    },
+    [jumpToChar, clearLookup, clearSentencePlay, clearAnnoTrigger, closeAnnoPopover],
   );
 
   // Bookmarks and in-book search hang off the live position refs and jumpToChar;
@@ -581,6 +595,7 @@ export function ReaderView() {
     if (fixedLayout || readingMode !== "paginated") return;
     const onKey = (e: KeyboardEvent) => {
       if (panelOpenRef.current) return; // a panel/gallery is open, don't flip pages behind it
+      if (isScrubFocused()) return; // the seek bar owns the arrows while it has focus
       if (e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
       const vert = verticalRef.current;
       switch (e.code) {
@@ -743,31 +758,12 @@ export function ReaderView() {
   const paged = readingMode === "paginated";
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       <header className="flex items-center gap-2 border-b px-3 py-2">
         <Button variant="ghost" size="icon" onClick={close} aria-label="Back to library">
           <ArrowLeft className="size-4" />
         </Button>
         <p className="min-w-0 truncate text-xs font-medium tracking-tight">【{book.title}】</p>
-        {total > 0 && (
-          <>
-            <div className="h-4 w-px shrink-0 bg-border" />
-            <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
-              {(paged || fixedLayout) && pageInfo && (
-                <span className="tabular-nums">
-                  {pageInfo.page + 1}
-                  <span className="opacity-50">/{pageInfo.totalPages}</span>
-                </span>
-              )}
-              <div className="flex items-center gap-1.5">
-                <div className="h-1 w-14 overflow-hidden bg-muted">
-                  <div className="h-full bg-muted-foreground/70 transition-[width] duration-300 ease-out" style={{ width: `${progressPct}%` }} />
-                </div>
-                <span className="w-8 text-right tabular-nums">{progressPct}%</span>
-              </div>
-            </div>
-          </>
-        )}
         <div className="flex-1" />
         <Button variant="ghost" size="icon" onClick={() => setTocOpen(true)} disabled={!chapters.length} aria-label="Table of contents">
           <List className="size-4" />
@@ -888,6 +884,20 @@ export function ReaderView() {
           onClose={closeAnnoPopover}
         />
       </div>
+
+      <ReaderProgress
+        mode={progressBar}
+        char={currentChar}
+        total={total}
+        fixedLayout={fixedLayout}
+        chapters={chapters}
+        bookmarks={bookmarks}
+        annotations={annotations}
+        pageInfo={pageInfo}
+        inverted={fixedLayout ? fixedDataRef.current?.ppd === "rtl" : vertical}
+        speed={sessionSpeed}
+        onSeek={seekToChar}
+      />
 
       <ReaderToc open={tocOpen} onOpenChange={setTocOpen} chapters={chapters} activeChapterId={activeChapterId} onJump={handleJump} />
 

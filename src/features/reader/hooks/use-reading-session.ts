@@ -57,6 +57,12 @@ const IDLE_SESSION: Session = {
 const TICK_MS = 1000;
 const IDLE_MS = 180_000; // no input for this long ⇒ stop counting time (AFK)
 const MAX_TICK_MS = 5 * TICK_MS; // cap a single tick's time (guards against timer stalls)
+// Below this much of a session, chars/minute is still noise (one slow page skews it).
+const MIN_SPEED_MS = 90_000;
+const MIN_SPEED_CHARS = 300;
+
+// Characters read come from whichever accumulator the mode uses.
+const charsReadOf = (s: Session) => (s.mode === "paginated" ? s.pacc.charsAccum : s.mode === "continuous" ? s.acc.charsAccum : 0);
 
 export function useReadingSession(bookId?: string | null) {
   const ref = useRef<Session>({ ...IDLE_SESSION });
@@ -76,9 +82,6 @@ export function useReadingSession(bookId?: string | null) {
       pageEnteredActiveMs: 0,
     };
   };
-
-  // Characters read come from whichever accumulator the mode uses.
-  const charsReadOf = (s: Session) => (s.mode === "paginated" ? s.pacc.charsAccum : s.mode === "continuous" ? s.acc.charsAccum : 0);
 
   const flush = useCallback(() => {
     const s = ref.current;
@@ -172,5 +175,17 @@ export function useReadingSession(bookId?: string | null) {
     return () => window.removeEventListener("beforeunload", flush);
   }, [flush]);
 
-  return { mark, flush };
+  // Reading speed of the live session, in characters per minute, or null while
+  // it's too short to mean anything (and always for manga, which credits no
+  // characters). Polled, not reactive: reading it on every tick would re-render
+  // the reader once a second.
+  const speed = useCallback((): number | null => {
+    const s = ref.current;
+    if (!s.active || s.mode === "fixed") return null;
+    const chars = charsReadOf(s);
+    if (s.activeMs < MIN_SPEED_MS || chars < MIN_SPEED_CHARS) return null;
+    return chars / (s.activeMs / 60_000);
+  }, []);
+
+  return { mark, flush, speed };
 }

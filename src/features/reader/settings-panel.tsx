@@ -16,6 +16,7 @@ import {
   MANGA_READING_MODES,
   MANGA_SCROLL_DIRECTIONS,
   WRITING_MODES,
+  PROGRESS_BAR_MODES,
   PAGE_COLUMNS_OPTIONS,
   SIDE_MARGIN_RANGE,
   MANGA_STRIP_WIDTH_RANGE,
@@ -113,12 +114,14 @@ export function ReaderSettingsPanel({ open, onOpenChange, fixedLayout = false, v
   const mangaScrollDirection = useSettingsStore((s) => s.mangaScrollDirection);
   const mangaStripWidth = useSettingsStore((s) => s.mangaStripWidth);
   const mangaStripGap = useSettingsStore((s) => s.mangaStripGap);
+  const progressBar = useSettingsStore((s) => s.progressBar);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setMangaSpread = useSettingsStore((s) => s.setMangaSpread);
   const setMangaReadingMode = useSettingsStore((s) => s.setMangaReadingMode);
   const setMangaScrollDirection = useSettingsStore((s) => s.setMangaScrollDirection);
   const setMangaStripWidth = useSettingsStore((s) => s.setMangaStripWidth);
   const setMangaStripGap = useSettingsStore((s) => s.setMangaStripGap);
+  const setProgressBar = useSettingsStore((s) => s.setProgressBar);
   const reset = useSettingsStore((s) => s.reset);
 
   return (
@@ -137,6 +140,16 @@ export function ReaderSettingsPanel({ open, onOpenChange, fixedLayout = false, v
               <ToggleGroupItem value="dark" className="flex-1">
                 Dark
               </ToggleGroupItem>
+            </ToggleGroup>
+          </Field>
+
+          <Field label="Progress Bar">
+            <ToggleGroup {...segmented} value={progressBar} onValueChange={guard(setProgressBar)}>
+              {PROGRESS_BAR_MODES.map((m) => (
+                <ToggleGroupItem key={m.value} value={m.value} className="flex-1">
+                  {m.label}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
           </Field>
 

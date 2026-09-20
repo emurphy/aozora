@@ -18,6 +18,7 @@ export type MangaSpread = "auto" | "single" | "double";
 export type MangaReadingMode = "paginated" | "continuous";
 export type MangaScrollDirection = "vertical" | "horizontal";
 export type WritingMode = "auto" | "horizontal" | "vertical";
+export type ProgressBarMode = "always" | "auto" | "off";
 
 /** CSS font-family stacks per built-in font. `mincho` rides on system faces (Yu
  *  Mincho lead); `noto-serif`/`noto-sans` use the bundled Noto JP faces and
@@ -135,6 +136,18 @@ export const WRITING_MODES: { value: WritingMode; label: string }[] = [
   { value: "vertical", label: "Vertical" },
 ];
 
+/**
+ * Visibility of the reader's bottom seek bar.
+ *   - always: pinned under the page, part of the layout
+ *   - auto:   overlays the page, revealed when the pointer nears the bottom edge
+ *   - off:    hidden, along with the position readout it carries
+ */
+export const PROGRESS_BAR_MODES: { value: ProgressBarMode; label: string }[] = [
+  { value: "always", label: "Always" },
+  { value: "auto", label: "Auto" },
+  { value: "off", label: "Off" },
+];
+
 interface SettingsState {
   fontSize: number;
   lineHeight: number;
@@ -150,6 +163,7 @@ interface SettingsState {
   writingMode: WritingMode;
   pageColumns: number;
   sideMargin: number;
+  progressBar: ProgressBarMode;
   discordRichPresence: boolean;
   discordCover: boolean;
   setFontSize: (fontSize: number) => void;
@@ -166,6 +180,7 @@ interface SettingsState {
   setWritingMode: (writingMode: WritingMode) => void;
   setPageColumns: (pageColumns: number) => void;
   setSideMargin: (sideMargin: number) => void;
+  setProgressBar: (progressBar: ProgressBarMode) => void;
   setDiscordRichPresence: (discordRichPresence: boolean) => void;
   setDiscordCover: (discordCover: boolean) => void;
   reset: () => void;
@@ -187,6 +202,7 @@ type SettingsData = Pick<
   | "writingMode"
   | "pageColumns"
   | "sideMargin"
+  | "progressBar"
   | "discordRichPresence"
   | "discordCover"
 >;
@@ -206,6 +222,7 @@ const DEFAULTS: SettingsData = {
   writingMode: "auto",
   pageColumns: 0, // auto
   sideMargin: 12, // % per edge
+  progressBar: "always",
   discordRichPresence: true, // opt-out; shares the current book to Discord
   discordCover: true, // opt-out; uploads the cover to a public host (catbox.moe) for the large image
 };
@@ -228,6 +245,7 @@ export const useSettingsStore = create<SettingsState>()(
       setWritingMode: (writingMode) => set({ writingMode }),
       setPageColumns: (pageColumns) => set({ pageColumns }),
       setSideMargin: (sideMargin) => set({ sideMargin }),
+      setProgressBar: (progressBar) => set({ progressBar }),
       setDiscordRichPresence: (discordRichPresence) => set({ discordRichPresence }),
       setDiscordCover: (discordCover) => set({ discordCover }),
       reset: () => set({ ...DEFAULTS }),
