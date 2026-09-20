@@ -35,7 +35,7 @@
 - **Theo dõi từ vựng**: Mọi từ bạn tra đều được lưu lại kèm câu chứa từ và cuốn sách đã gặp. Trang **Words** liệt kê chúng cùng số lần gặp, cho phép đánh dấu **learning / known / ignored**, tạo hàng loạt thẻ Anki và nhảy thẳng về đúng đoạn văn đã gặp từ đó.
 - **Thống kê tiến trình đọc**: Tự động ghi lại thời gian đọc và tổng hợp thành bảng thống kê trực quan, bao gồm bản đồ nhiệt (kiểu GitHub), chuỗi ngày đọc (streak), mục tiêu hằng ngày, các cột mốc đạt được và tổng thời gian đọc cho từng cuốn sách.
 - **Chế độ đọc toàn màn hình**: Loại bỏ mọi xao nhãng chỉ với một cú nhấp vào nút trên thanh công cụ hoặc bấm phím **F11**.
-- [**Tạo thẻ ghi nhớ Anki**](#anki): Tạo thẻ Anki tức thì ngay từ bảng tra từ điển thông qua **AnkiConnect**. Tự động gán các thông tin như từ vựng, cách đọc, định nghĩa, câu chứa từ và ảnh chụp đoạn văn vào đúng các trường trong ghi chú của bạn.
+- [**Tạo thẻ ghi nhớ Anki**](#anki): Tạo thẻ Anki tức thì ngay từ bảng tra từ điển thông qua **AnkiConnect**. Tự động gán các thông tin như từ vựng, cách đọc, định nghĩa và câu chứa từ vào đúng các trường trong ghi chú của bạn.
 - [**Đọc từ vựng & câu văn bằng giọng waifu (TTS)**](#voice-waifu-tts): Lắng nghe phát âm tiếng Nhật tự nhiên qua công cụ **VOICEVOX**. Bạn có thể bấm vào biểu tượng loa ở mục từ điển để nghe từ đơn, hoặc giữ phím + di chuột để nghe cả câu kèm **hiệu ứng nổi bật chữ kiểu karaoke** chạy đồng bộ theo giọng đọc.
 - **Hiển thị trạng thái Discord (Rich Presence)**: Tự động cập nhật tên cuốn sách bạn đang đọc lên hồ sơ Discord cá nhân.
 
@@ -68,8 +68,9 @@ Tạo thẻ ghi nhớ (flashcard) từ những từ bạn vừa tra cứu ngay t
 **Cài đặt (chỉ làm một lần):** Cài add-on AnkiConnect trong Anki, khởi động lại Anki và giữ ứng dụng luôn chạy, sau đó vào **Aozora Settings → Anki**:
 
 1. Bật tính năng tích hợp và nhấn **Test** để kết nối (thao tác này sẽ tải danh sách bộ thẻ và loại ghi chú của bạn).
-2. Chọn bộ thẻ (**Deck**) và loại ghi chú (**Note type**) mong muốn, sau đó gán (map) từng trường của ghi chú với thông tin tương ứng. Aozora sẽ tự động gợi ý các giá trị mặc định dựa trên tên trường (ví dụ: trường `Sentence` → câu văn, `Meaning` → định nghĩa).
-3. Tùy chỉnh các thiết lập khác: thêm thẻ tag, bật/tắt chế độ chống trùng lặp thẻ, và bật/tắt tính năng chụp màn hình (có thể điều chỉnh chất lượng ảnh).
+2. Nhấn **Install Aozora note type** để Aozora tự tạo loại ghi chú của riêng nó trong Anki: một mẫu thẻ đã thiết kế sẵn (mặt trước là từ cỡ lớn, bên dưới là câu văn gặp từ đó với từ được gạch chân; mặt sau là cách đọc dạng furigana, biểu đồ pitch, từ loại, nghĩa và tên cuốn sách), toàn bộ trường đã được gán sẵn. Bạn chỉ còn phải chọn bộ thẻ (**Deck**). Mẫu thẻ dùng chính stylesheet của các từ điển bạn đã nhập, nên hãy nhấn lại sau khi nhập thêm từ điển; các thẻ đã tạo không bị đụng tới.
+3. Hoặc tự cấu hình: chọn bộ thẻ (**Deck**) và loại ghi chú (**Note type**) mong muốn, sau đó gán (map) từng trường của ghi chú với thông tin tương ứng. Aozora sẽ tự động gợi ý các giá trị mặc định dựa trên tên trường (ví dụ: trường `Sentence` → câu văn, `Meaning` → định nghĩa).
+4. Tùy chỉnh các thiết lập khác: thêm thẻ tag và bật/tắt chế độ chống trùng lặp thẻ.
 
 **Các nội dung bạn có thể gán vào một trường (field):**
 
@@ -79,9 +80,9 @@ Tạo thẻ ghi nhớ (flashcard) từ những từ bạn vừa tra cứu ngay t
 | **Furigana**                 | Cách đọc đặt trên chữ Hán, dạng `<ruby>` hoặc `漢字[かんじ]`.                |
 | **Definition**               | Phần giải nghĩa (giữ nguyên định dạng HTML hoặc chuyển thành văn bản thuần). |
 | **Sentence**                 | Toàn bộ câu chứa từ cần tra (không kèm furigana).                            |
+| **Sentence (word marked)**   | Chính câu đó, với từ vừa tra được in đậm.                                    |
 | **Pitch accent / Frequency** | Số hạ giọng (downstep) và mức độ phổ biến/tần suất xuất hiện của từ.         |
 | **Book title / Book author** | Thông tin chi tiết (metadata) của cuốn sách đang đọc.                        |
-| **Screenshot**               | Ảnh chụp màn hình đoạn văn bản, cắt theo đúng đoạn chứa câu ví dụ.           |
 
 **Tạo thẻ (Mining):** Khi đang đọc, bạn di chuột vào từ cần tra và giữ phím kích hoạt như bình thường, sau đó nhấp vào nút **＋ Anki** trong bảng tra cứu. Nút sẽ chuyển thành dấu tích xanh khi thẻ được thêm thành công; nếu từ đã tồn tại (và bạn chọn ngăn tạo trùng), hệ thống sẽ báo lại. Tên cuốn sách cũng được tự động thêm làm thẻ tag, giúp các thẻ ghi nhớ luôn được nhóm gọn gàng theo từng nguồn sách.
 

@@ -1,18 +1,14 @@
 import type { AnkiConfig, AnkiNote, DictionaryEntry, GlossContent, GlossElement, KanjiEntry } from "@/lib/types";
 import { distributeFurigana } from "@/lib/dictionary/furigana";
 import { escapeHtml } from "@/lib/dictionary/escape";
+import { DICT_SCOPE_ATTR, glossDataAttrs, glossStyleDeclarations, inlineCss } from "@/lib/dictionary/gloss-style";
 import { downstepNumber, pitchAccentSvg } from "@/lib/dictionary/pitch";
 
 /**
  * Builds Anki notes from a dictionary lookup + the user's `{marker}` field
  * templates (Yomitan's convention; see references/yomitan/ext/js/data/
- * anki-template-util.js). The renderer resolves every marker except
- * `{screenshot}`: the window capture happens in the main process, so that marker
- * expands to a sentinel the main process later swaps for the stored `<img>` tag.
+ * anki-template-util.js).
  */
-
-/** Placeholder for `{screenshot}`; the main process replaces it post-capture. */
-export const SCREENSHOT_SENTINEL = "%%AOZORA_SCREENSHOT%%";
 
 /** Outcome of a mining attempt, shared by the reader and the popup's button state. */
 export type MineStatus = "added" | "duplicate" | "error";
@@ -35,6 +31,8 @@ export interface AnkiCardData {
   glossary: string; // HTML
   glossaryPlain: string; // newline-joined text
   sentence: string;
+  /** The sentence with the matched run wrapped in `<b>` (HTML). */
+  sentenceMarked: string;
   /** Sentence text before / matched run / after (for cloze cards). */
   clozePrefix: string;
   clozeBody: string;
@@ -51,7 +49,6 @@ export interface AnkiCardData {
   dictionary: string;
   documentTitle: string;
   documentAuthor: string;
-  hasScreenshot: boolean;
   /** Note-level tags contributed by the source (e.g. the book title). */
   extraTags: string[];
 }
@@ -67,16 +64,17 @@ export interface KanjiCardData {
   tags: string;
   dictionary: string;
   sentence: string;
+  /** The sentence with the matched run wrapped in `<b>` (HTML). */
+  sentenceMarked: string;
   clozePrefix: string;
   clozeBody: string;
   clozeSuffix: string;
   documentTitle: string;
   documentAuthor: string;
-  hasScreenshot: boolean;
   extraTags: string[];
 }
 
-// Structured-content tags safe to keep in an Anki card (attributes/styles dropped).
+// Structured-content tags safe to keep in an Anki card.
 const HTML_TAGS = new Set([
   "div",
   "span",
@@ -115,7 +113,14 @@ export function glossToHtml(node: GlossContent | undefined): string {
   if (tag === "br") return "<br>";
   const inner = el.content != null ? glossToHtml(el.content) : "";
   if (!HTML_TAGS.has(tag)) return inner; // unknown wrapper: keep its text, drop the tag
-  return `<${tag}>${inner}</${tag}>`;
+  // Inline styling plus the `data-sc-*` hooks the dictionary's own stylesheet
+  // targets; the note type carries that stylesheet (see anki-model.ts).
+  const css = glossStyleDeclarations(el.style);
+  const style = css ? ` style="${escapeHtml(inlineCss(css))}"` : "";
+  const data = Object.entries(glossDataAttrs(el.data))
+    .map(([name, value]) => ` ${name}="${escapeHtml(value)}"`)
+    .join("");
+  return `<${tag}${data}${style}>${inner}</${tag}>`;
 }
 
 /** Serializes a glossary tree to plain text (block tags become newlines). */
@@ -154,7 +159,6 @@ export interface AnkiCardContext {
   cloze?: Cloze;
   documentTitle: string;
   documentAuthor: string;
-  hasScreenshot: boolean;
 }
 
 /** Book-title note tag shared by term + kanji cards. */
@@ -162,19 +166,36 @@ function extraTagsFor(ctx: AnkiCardContext): string[] {
   return ctx.documentTitle ? [ctx.documentTitle.replace(/\s+/g, "_")] : [];
 }
 
+/**
+ * The sentence with the matched run bolded. Mining away from the reader has no
+ * live match, so it falls back to the plain sentence: the cloze default would
+ * otherwise reduce the field to the bare word.
+ */
+function markedSentence(ctx: AnkiCardContext): string {
+  if (!ctx.cloze) return escapeHtml(ctx.sentence);
+  return `${escapeHtml(ctx.cloze.prefix)}<b>${escapeHtml(ctx.cloze.body)}</b>${escapeHtml(ctx.cloze.suffix)}`;
+}
+
 /** Flattens a dictionary entry + its reading context into card marker values. */
 export function cardDataFromEntry(entry: DictionaryEntry, ctx: AnkiCardContext): AnkiCardData {
   const reading = entry.reading ?? "";
-  const allGlosses = entry.byDict.flatMap((g) => g.glosses);
+  // Each gloss keeps the dictionary it came from on its wrapper, so the
+  // stylesheet the note type carries for that dictionary applies to it alone.
+  const items = entry.byDict.flatMap((g) => g.glosses.map((gloss) => ({ dictId: g.dictId, gloss })));
+  const scope = (dictId: string) => ` ${DICT_SCOPE_ATTR}="${escapeHtml(dictId)}"`;
   const glossary =
-    allGlosses.length <= 1 ? glossToHtml(allGlosses[0]) : `<ol>${allGlosses.map((g) => `<li>${glossToHtml(g)}</li>`).join("")}</ol>`;
-  const glossaryPlain = allGlosses
-    .map((g) => glossToText(g).trim())
+    items.length <= 1
+      ? items.map((it) => `<div${scope(it.dictId)}>${glossToHtml(it.gloss)}</div>`).join("")
+      : `<ol>${items.map((it) => `<li${scope(it.dictId)}>${glossToHtml(it.gloss)}</li>`).join("")}</ol>`;
+  const glossaryPlain = items
+    .map((it) => glossToText(it.gloss).trim())
     .filter(Boolean)
     .join("\n");
 
   const pitchAccents = [...new Set(entry.pitches.map((p) => downstepNumber(p.position)))].join(", ");
-  const pitchGraphs = entry.pitches
+  // Two dictionaries carrying the same accent would otherwise draw the same
+  // graph twice; reading + downstep is the graph's visible identity.
+  const pitchGraphs = [...new Map(entry.pitches.map((p) => [`${p.reading}:${p.position}`, p])).values()]
     .map((p) => pitchAccentSvg(p.reading, p.position, p.nasal, p.devoice))
     .filter(Boolean)
     .join("");
@@ -194,6 +215,7 @@ export function cardDataFromEntry(entry: DictionaryEntry, ctx: AnkiCardContext):
     glossary,
     glossaryPlain,
     sentence: ctx.sentence,
+    sentenceMarked: markedSentence(ctx),
     clozePrefix: cloze.prefix,
     clozeBody: cloze.body,
     clozeSuffix: cloze.suffix,
@@ -205,7 +227,6 @@ export function cardDataFromEntry(entry: DictionaryEntry, ctx: AnkiCardContext):
     dictionary,
     documentTitle: ctx.documentTitle,
     documentAuthor: ctx.documentAuthor,
-    hasScreenshot: ctx.hasScreenshot,
     extraTags: extraTagsFor(ctx),
   };
 }
@@ -224,12 +245,12 @@ export function cardDataFromKanji(kanji: KanjiEntry, ctx: AnkiCardContext): Kanj
     tags: [...new Set(kanji.tags.map((t) => t.name))].join(" "),
     dictionary: kanji.dictTitle,
     sentence: ctx.sentence,
+    sentenceMarked: markedSentence(ctx),
     clozePrefix: cloze.prefix,
     clozeBody: cloze.body,
     clozeSuffix: cloze.suffix,
     documentTitle: ctx.documentTitle,
     documentAuthor: ctx.documentAuthor,
-    hasScreenshot: ctx.hasScreenshot,
     extraTags: extraTagsFor(ctx),
   };
 }
@@ -243,6 +264,7 @@ const MARKERS: Record<string, (d: AnkiCardData) => string> = {
   glossary: (d) => d.glossary,
   "glossary-plain": (d) => d.glossaryPlain,
   sentence: (d) => d.sentence,
+  "sentence-marked": (d) => d.sentenceMarked,
   "cloze-prefix": (d) => d.clozePrefix,
   "cloze-body": (d) => d.clozeBody,
   "cloze-suffix": (d) => d.clozeSuffix,
@@ -254,7 +276,6 @@ const MARKERS: Record<string, (d: AnkiCardData) => string> = {
   dictionary: (d) => d.dictionary,
   "document-title": (d) => d.documentTitle,
   "document-author": (d) => d.documentAuthor,
-  screenshot: (d) => (d.hasScreenshot ? SCREENSHOT_SENTINEL : ""),
 };
 
 /** Every supported kanji field marker and how it draws from the kanji card data. */
@@ -268,12 +289,12 @@ const KANJI_MARKERS: Record<string, (d: KanjiCardData) => string> = {
   tags: (d) => d.tags,
   dictionary: (d) => d.dictionary,
   sentence: (d) => d.sentence,
+  "sentence-marked": (d) => d.sentenceMarked,
   "cloze-prefix": (d) => d.clozePrefix,
   "cloze-body": (d) => d.clozeBody,
   "cloze-suffix": (d) => d.clozeSuffix,
   "document-title": (d) => d.documentTitle,
   "document-author": (d) => d.documentAuthor,
-  screenshot: (d) => (d.hasScreenshot ? SCREENSHOT_SENTINEL : ""),
 };
 
 /** Markers offered in the settings field-mapping menu (term note type). */

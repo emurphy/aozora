@@ -1,5 +1,6 @@
 import { createElement, Fragment, useEffect, useState, type CSSProperties, type Key, type ReactNode } from "react";
-import type { GlossContent, GlossElement, GlossStyle } from "@/lib/types";
+import type { GlossContent, GlossElement } from "@/lib/types";
+import { glossDataAttrs, glossStyleDeclarations } from "@/lib/dictionary/gloss-style";
 
 /**
  * Renders one Yomitan glossary item (a JSON tree of an HTML subset) as React
@@ -33,70 +34,6 @@ const PASSTHROUGH_TAGS = new Set([
   "th",
   "td",
 ]);
-
-/**
- * Maps a node's `data` field to `data-sc-*` attributes, matching Yomitan's
- * dataset convention (`{content:"x"}` → `data-sc-content="x"`). The dictionary's
- * scoped `styles.css` targets these, so they're what make rich dicts (Jitendex)
- * render their tag badges, cross-reference boxes, etc.
- */
-function dataAttrs(data: Record<string, string> | undefined): Record<string, string> {
-  if (!data) return {};
-  const attrs: Record<string, string> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (!key || typeof value !== "string") continue;
-    const kebab = key.replace(/([A-Z])/g, "-$1").toLowerCase();
-    attrs[`data-sc-${kebab}`] = value;
-  }
-  return attrs;
-}
-
-/** Maps the dictionary's structured-content style subset onto React inline style. */
-function toCss(style: GlossStyle | undefined): CSSProperties | undefined {
-  if (!style) return undefined;
-  const css: Record<string, string> = {};
-  const set = (key: string, value: string | undefined) => {
-    if (typeof value === "string" && value.length > 0) css[key] = value;
-  };
-  const em = (key: string, value: number | string | undefined) => {
-    if (typeof value === "number") css[key] = `${value}em`;
-    else if (typeof value === "string") css[key] = value;
-  };
-
-  set("fontStyle", style.fontStyle);
-  set("fontWeight", style.fontWeight);
-  set("fontSize", style.fontSize);
-  set("color", style.color);
-  set("background", style.background);
-  set("backgroundColor", style.backgroundColor);
-  set("verticalAlign", style.verticalAlign);
-  set("textAlign", style.textAlign);
-  set("textEmphasis", style.textEmphasis);
-  set("textShadow", style.textShadow);
-  if (typeof style.textDecorationLine === "string") set("textDecoration", style.textDecorationLine);
-  else if (Array.isArray(style.textDecorationLine)) css.textDecoration = style.textDecorationLine.join(" ");
-  set("textDecorationStyle", style.textDecorationStyle);
-  set("textDecorationColor", style.textDecorationColor);
-  set("borderColor", style.borderColor);
-  set("borderStyle", style.borderStyle);
-  set("borderRadius", style.borderRadius);
-  set("borderWidth", style.borderWidth);
-  set("margin", style.margin);
-  em("marginTop", style.marginTop);
-  em("marginLeft", style.marginLeft);
-  em("marginRight", style.marginRight);
-  em("marginBottom", style.marginBottom);
-  set("padding", style.padding);
-  set("paddingTop", style.paddingTop);
-  set("paddingLeft", style.paddingLeft);
-  set("paddingRight", style.paddingRight);
-  set("paddingBottom", style.paddingBottom);
-  set("wordBreak", style.wordBreak);
-  set("whiteSpace", style.whiteSpace);
-  set("listStyleType", style.listStyleType);
-
-  return Object.keys(css).length ? (css as CSSProperties) : undefined;
-}
 
 /**
  * A glossary image, resolved lazily to a data URL from the dictionary's stored
@@ -150,7 +87,7 @@ function renderNode(node: GlossContent | undefined, key: Key, dictId: string): R
   // Links: render as plain text (no navigation target in the popup).
   if (tag === "a")
     return (
-      <span className="underline decoration-dotted" {...dataAttrs(el.data)}>
+      <span className="underline decoration-dotted" {...glossDataAttrs(el.data)}>
         {children}
       </span>
     );
@@ -159,8 +96,8 @@ function renderNode(node: GlossContent | undefined, key: Key, dictId: string): R
     return el.content != null ? renderNode(el.content, key, dictId) : null;
   }
 
-  const props: Record<string, unknown> = { ...dataAttrs(el.data) };
-  const style = toCss(el.style);
+  const props: Record<string, unknown> = { ...glossDataAttrs(el.data) };
+  const style = glossStyleDeclarations(el.style) as CSSProperties | undefined;
   if (style) props.style = style;
   if (el.lang) props.lang = el.lang;
   if (el.title) props.title = el.title;

@@ -24,12 +24,9 @@ interface Props {
   onMine?: (entry: DictionaryEntry) => Promise<MineStatus>;
   onMineKanji?: (kanji: KanjiEntry) => Promise<MineStatus>;
   onSpeak?: (text: string) => void;
-  /** Kept mounted but visually hidden while a mining screenshot is captured, so
-   *  the popup doesn't occlude the sentence in the image. */
-  hiddenForCapture?: boolean;
 }
 
-export function DictionaryPopup({ result, anchor, onMouseEnter, onMouseLeave, onLayout, onMine, onMineKanji, onSpeak, hiddenForCapture }: Props) {
+export function DictionaryPopup({ result, anchor, onMouseEnter, onMouseLeave, onLayout, onMine, onMineKanji, onSpeak }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const pos = useAnchoredPosition(ref, anchor, result, onLayout);
 
@@ -46,7 +43,7 @@ export function DictionaryPopup({ result, anchor, onMouseEnter, onMouseLeave, on
         position: "fixed",
         left: pos?.left ?? -9999,
         top: pos?.top ?? -9999,
-        visibility: pos && !hiddenForCapture ? "visible" : "hidden",
+        visibility: pos ? "visible" : "hidden",
       }}
       className="z-50 max-h-80 w-80 overflow-y-auto border bg-popover text-popover-foreground shadow-md"
     >

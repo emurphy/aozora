@@ -6,8 +6,9 @@ import type {
   Annotation,
   AnkiAddResult,
   AnkiEndpoint,
+  AnkiModelResult,
+  AnkiModelSpec,
   AnkiNote,
-  AnkiScreenshotRequest,
   AnkiTestResult,
   BackupPrefs,
   BackupResult,
@@ -135,7 +136,8 @@ export interface AnkiApi {
   decks(endpoint: AnkiEndpoint): Promise<string[]>;
   models(endpoint: AnkiEndpoint): Promise<string[]>;
   fields(endpoint: AnkiEndpoint, model: string): Promise<string[]>;
-  addNote(endpoint: AnkiEndpoint, note: AnkiNote, screenshot: AnkiScreenshotRequest | null): Promise<AnkiAddResult>;
+  ensureModel(endpoint: AnkiEndpoint, spec: AnkiModelSpec): Promise<AnkiModelResult>;
+  addNote(endpoint: AnkiEndpoint, note: AnkiNote): Promise<AnkiAddResult>;
 }
 
 export interface VoicevoxApi {

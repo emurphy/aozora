@@ -21,8 +21,6 @@ const DEFAULTS: AnkiConfig = {
   kanjiFields: {},
   tags: ["aozora"],
   duplicateBehavior: "prevent",
-  screenshot: true,
-  screenshotQuality: 90,
 };
 
 interface AnkiState extends AnkiConfig {
@@ -41,8 +39,6 @@ interface AnkiState extends AnkiConfig {
   setKanjiField: (name: string, template: string) => void;
   setTags: (tags: string[]) => void;
   setDuplicateBehavior: (duplicateBehavior: AnkiDuplicateBehavior) => void;
-  setScreenshot: (screenshot: boolean) => void;
-  setScreenshotQuality: (screenshotQuality: number) => void;
 }
 
 export const useAnkiStore = create<AnkiState>()(
@@ -62,8 +58,6 @@ export const useAnkiStore = create<AnkiState>()(
       setKanjiField: (name, template) => set((s) => ({ kanjiFields: { ...s.kanjiFields, [name]: template } })),
       setTags: (tags) => set({ tags }),
       setDuplicateBehavior: (duplicateBehavior) => set({ duplicateBehavior }),
-      setScreenshot: (screenshot) => set({ screenshot }),
-      setScreenshotQuality: (screenshotQuality) => set({ screenshotQuality }),
     }),
     {
       name: "aozora-anki",

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { AnkiScreenshotRequest, Book, DictionaryEntry, KanjiEntry, LookupResult } from "@/lib/types";
+import type { Book, DictionaryEntry, KanjiEntry, LookupResult } from "@/lib/types";
 import { setLookupHighlight } from "@/lib/reader/highlight";
 import { cursorTextFromPoint } from "@/lib/reader/lookup-text";
 import { sentenceAround, sentenceClozeAround, type SentenceCloze } from "@/lib/reader/sentence";
-import { blockAncestor } from "@/lib/reader/search";
 import { useAnkiStore } from "@/stores/anki-store";
 import { modifierHeld, type LookupModifier } from "@/stores/dictionary-store";
 import { cardDataFromEntry, cardDataFromKanji, buildNote, buildKanjiNote, type MineStatus } from "@/lib/dictionary/anki-note";
@@ -57,9 +56,9 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
   // words while reaching for the popup don't re-trigger a lookup.
   const lookupAnchorRef = useRef<DOMRect | null>(null); // matched-run box of the open popup
   // Live match range + its content root, kept so Anki mining can pull the enclosing
-  // sentence and a screenshot rect for the word currently in the popup. The surface
-  // comes from the scanned text, not range.toString(): a Range spans the furigana
-  // the text walk skipped, so its string wouldn't occur in the sentence.
+  // sentence for the word currently in the popup. The surface comes from the scanned
+  // text, not range.toString(): a Range spans the furigana the text walk skipped, so
+  // its string wouldn't occur in the sentence.
   const mineCtxRef = useRef<{ range: Range; contentRoot: Element; surface: string } | null>(null);
   const popupRectRef = useRef<{ left: number; top: number; right: number; bottom: number } | null>(null);
   const enabledRef = useRef(enabled);
@@ -68,8 +67,6 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
   modifierRef.current = modifier;
 
   const [lookup, setLookup] = useState<{ result: LookupResult; anchor: DOMRect | null } | null>(null);
-  // Hides the popup for one repaint while a mining screenshot is captured.
-  const [capturing, setCapturing] = useState(false);
 
   // Vocabulary capture: a dwell timer decides what counts as "looked up", the
   // buffer batches the writes. Refs mirror props so the timers read fresh values.
@@ -228,41 +225,16 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
     [hostRef, modeRef, scheduleClear, captureLookup],
   );
 
-  // Pulls the shared card context (cloze/sentence) from the live match and, when a
-  // screenshot is wanted, hides the popup a frame and builds the crop rect. The
-  // caller re-shows the popup (setCapturing(false)) once the add completes.
-  const buildContextAndShot = useCallback(
-    async (
-      wantShot: boolean,
-      quality: number,
-    ): Promise<{ cloze: SentenceCloze | null; sentence: string; screenshot: AnkiScreenshotRequest | null; useShot: boolean }> => {
-      const ctx = mineCtxRef.current;
-      const cloze = ctx ? sentenceClozeAround(ctx.range, ctx.contentRoot) : null;
-      const useShot = wantShot && ctx != null;
-      let screenshot: AnkiScreenshotRequest | null = null;
-      if (useShot && ctx) {
-        // Hide the popup and wait one painted frame so it doesn't occlude the
-        // sentence in the capture the main process is about to take.
-        setCapturing(true);
-        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-        // Crop to the paragraph containing the word, clamped to the viewport.
-        const block = blockAncestor(ctx.range.startContainer, ctx.contentRoot);
-        const r = block.getBoundingClientRect();
-        const x = Math.max(0, r.left);
-        const y = Math.max(0, r.top);
-        const width = Math.min(r.right, window.innerWidth) - x;
-        const height = Math.min(r.bottom, window.innerHeight) - y;
-        const rect = width > 0 && height > 0 ? { x, y, width, height } : null;
-        screenshot = { rect, format: quality >= 100 ? "png" : "jpg", quality };
-      }
-      return { cloze, sentence: cloze?.sentence ?? "", screenshot, useShot };
-    },
-    [],
-  );
+  // The sentence around the live match, split for the cloze markers.
+  const mineContext = useCallback((): { cloze: SentenceCloze | null; sentence: string } => {
+    const ctx = mineCtxRef.current;
+    const cloze = ctx ? sentenceClozeAround(ctx.range, ctx.contentRoot) : null;
+    return { cloze, sentence: cloze?.sentence ?? "" };
+  }, []);
 
-  // Mines the popup's term entry to Anki: pulls the enclosing sentence + a
-  // screenshot rect from the live match, builds the note from the configured
-  // templates, and asks the main process to add it (screenshot captured its side).
+  // Mines the popup's term entry to Anki: pulls the enclosing sentence from the
+  // live match, builds the note from the configured templates, and asks the main
+  // process to add it.
   const mineEntry = useCallback(
     async (entry: DictionaryEntry): Promise<MineStatus> => {
       if (!book) return "error";
@@ -272,41 +244,36 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
         return "error";
       }
 
-      const { cloze, sentence, screenshot, useShot } = await buildContextAndShot(cfg.screenshot, cfg.screenshotQuality);
+      const { cloze, sentence } = mineContext();
       const data = cardDataFromEntry(entry, {
         sentence,
         cloze: cloze ?? undefined,
         documentTitle: book.title,
         documentAuthor: book.author ?? "",
-        hasScreenshot: useShot,
       });
       const note = buildNote(cfg, data);
 
-      try {
-        const res = await window.electronAPI.anki.addNote({ server: cfg.server, apiKey: cfg.apiKey }, note, screenshot);
-        // Either outcome means a card exists, so the word is being learned.
-        if (res.ok || /duplicate/i.test(res.error)) {
-          window.electronAPI.vocab.markMined(entry.expression, entry.reading ?? "").catch(() => {});
-        }
-        if (res.ok) {
-          toast.success(`Added “${entry.expression}” to Anki.`);
-          return "added";
-        }
-        if (/duplicate/i.test(res.error)) {
-          toast.info(`“${entry.expression}” is already in Anki.`);
-          return "duplicate";
-        }
-        toast.error(res.error);
-        return "error";
-      } finally {
-        if (useShot) setCapturing(false);
+      const res = await window.electronAPI.anki.addNote({ server: cfg.server, apiKey: cfg.apiKey }, note);
+      // Either outcome means a card exists, so the word is being learned.
+      if (res.ok || /duplicate/i.test(res.error)) {
+        window.electronAPI.vocab.markMined(entry.expression, entry.reading ?? "").catch(() => {});
       }
+      if (res.ok) {
+        toast.success(`Added “${entry.expression}” to Anki.`);
+        return "added";
+      }
+      if (/duplicate/i.test(res.error)) {
+        toast.info(`“${entry.expression}” is already in Anki.`);
+        return "duplicate";
+      }
+      toast.error(res.error);
+      return "error";
     },
-    [book, buildContextAndShot],
+    [book, mineContext],
   );
 
   // Mines a kanji from the popup's kanji card to its own note type (Yomitan keeps
-  // term and kanji notes separate). Shares the sentence/screenshot context.
+  // term and kanji notes separate). Shares the sentence context.
   const mineKanji = useCallback(
     async (kanji: KanjiEntry): Promise<MineStatus> => {
       if (!book) return "error";
@@ -316,33 +283,28 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
         return "error";
       }
 
-      const { cloze, sentence, screenshot, useShot } = await buildContextAndShot(cfg.screenshot, cfg.screenshotQuality);
+      const { cloze, sentence } = mineContext();
       const data = cardDataFromKanji(kanji, {
         sentence,
         cloze: cloze ?? undefined,
         documentTitle: book.title,
         documentAuthor: book.author ?? "",
-        hasScreenshot: useShot,
       });
       const note = buildKanjiNote(cfg, data);
 
-      try {
-        const res = await window.electronAPI.anki.addNote({ server: cfg.server, apiKey: cfg.apiKey }, note, screenshot);
-        if (res.ok) {
-          toast.success(`Added “${kanji.character}” to Anki.`);
-          return "added";
-        }
-        if (/duplicate/i.test(res.error)) {
-          toast.info(`“${kanji.character}” is already in Anki.`);
-          return "duplicate";
-        }
-        toast.error(res.error);
-        return "error";
-      } finally {
-        if (useShot) setCapturing(false);
+      const res = await window.electronAPI.anki.addNote({ server: cfg.server, apiKey: cfg.apiKey }, note);
+      if (res.ok) {
+        toast.success(`Added “${kanji.character}” to Anki.`);
+        return "added";
       }
+      if (/duplicate/i.test(res.error)) {
+        toast.info(`“${kanji.character}” is already in Anki.`);
+        return "duplicate";
+      }
+      toast.error(res.error);
+      return "error";
     },
-    [book, buildContextAndShot],
+    [book, mineContext],
   );
 
   // Coalesce rapid mousemoves into one lookup per frame.
@@ -429,7 +391,6 @@ export function useHoverDictionary({ hostRef, modeRef, charRef, book, enabled, m
 
   return {
     lookup,
-    capturing,
     clearLookup,
     mineEntry,
     mineKanji,

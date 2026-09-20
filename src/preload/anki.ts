@@ -1,5 +1,5 @@
 import { ipcRenderer } from "electron";
-import type { AnkiEndpoint, AnkiNote, AnkiScreenshotRequest, AnkiTestResult, AnkiAddResult } from "@/lib/types";
+import type { AnkiEndpoint, AnkiNote, AnkiTestResult, AnkiAddResult, AnkiModelSpec, AnkiModelResult } from "@/lib/types";
 
 /**
  * Anki mining API exposed as `window.electronAPI.anki`. The renderer owns the
@@ -19,7 +19,10 @@ export const ankiApi = {
   /** Field names of a model, for the field-mapping table. */
   fields: (endpoint: AnkiEndpoint, model: string): Promise<string[]> => ipcRenderer.invoke("anki:fields", endpoint, model),
 
-  /** Adds a note, optionally capturing + attaching a screenshot of the reader. */
-  addNote: (endpoint: AnkiEndpoint, note: AnkiNote, screenshot: AnkiScreenshotRequest | null): Promise<AnkiAddResult> =>
-    ipcRenderer.invoke("anki:add-note", endpoint, note, screenshot),
+  /** Creates one of Aozora's note types, or refreshes its templates + styling. */
+  ensureModel: (endpoint: AnkiEndpoint, spec: AnkiModelSpec): Promise<AnkiModelResult> =>
+    ipcRenderer.invoke("anki:ensure-model", endpoint, spec),
+
+  /** Adds a note built from the renderer's templates. */
+  addNote: (endpoint: AnkiEndpoint, note: AnkiNote): Promise<AnkiAddResult> => ipcRenderer.invoke("anki:add-note", endpoint, note),
 };

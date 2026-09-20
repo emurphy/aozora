@@ -54,8 +54,8 @@
 - **Full-screen reading**: a distraction-free mode, one click from the toolbar or the
   **F11** key.
 - [**Anki flashcard mining**](#anki): create Anki cards instantly from the dictionary popup
-  via **AnkiConnect**. It automatically maps the word, reading, definition, containing
-  sentence, and a screenshot of the passage to the right fields in your note.
+  via **AnkiConnect**. It automatically maps the word, reading, definition and the
+  sentence it was met in to the right fields in your note.
 - [**Voice waifu (TTS)**](#voice-waifu-tts): listen to natural Japanese pronunciation via
   **VOICEVOX**. Click the speaker icon on a dictionary entry to hear a single word, or hold
   a key + hover to hear a whole sentence with a **karaoke-style highlight** synced to the
@@ -113,11 +113,16 @@ open **Aozora Settings → Anki**:
 
 - **Enable** the integration and hit **Test** to connect (this loads your decks and note
   types).
-- Pick the target **deck** and **note type**, then map each of that note type's **fields**
-  to a piece of card content. Aozora guesses sensible defaults from the field names
-  (e.g. a field called _Sentence_ → the sentence, _Meaning_ → the definition).
-- Optionally set **tags**, choose whether to **allow or prevent duplicates**, and toggle
-  the **screenshot** (with an adjustable image quality).
+- Click **Install Aozora note type** and Aozora builds its own note type in Anki: a
+  designed card (the word on the front, above the sentence it was met in with the word
+  underlined; behind it the reading as furigana, the pitch graph, part of speech, the
+  definition and the book it came from) with every field already mapped. All that is left
+  is picking the **deck**. The card is styled with your dictionaries' own stylesheets, so
+  click it again after importing one; your notes are left alone either way.
+- Or bring your own: pick the target **deck** and **note type**, then map each of that note
+  type's **fields** to a piece of card content. Aozora guesses sensible defaults from the
+  field names (e.g. a field called _Sentence_ → the sentence, _Meaning_ → the definition).
+- Optionally set **tags** and choose whether to **allow or prevent duplicates**.
 
 The content you can map onto a field:
 
@@ -127,9 +132,9 @@ The content you can map onto a field:
 | **Furigana**                     | the reading over the kanji, as `<ruby>` or as plain `漢字[かんじ]` |
 | **Definition**                   | the glossary, kept as structured HTML or flattened to plain text   |
 | **Sentence**                     | the full sentence the word was found in (furigana excluded)        |
+| **Sentence (word marked)**       | the same sentence with the looked-up word in bold                  |
 | **Pitch accent** / **Frequency** | the downstep number(s) and frequency rating(s)                     |
 | **Book title** / **Book author** | the current book's metadata                                        |
-| **Screenshot**                   | an image of the passage, cropped to the sentence's paragraph       |
 
 **Mining**: in the reader, hover a word and hold the trigger key as usual, then click
 **＋ Anki** in the popup. The button shows a check when the card is added; if the note

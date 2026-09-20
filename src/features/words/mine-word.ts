@@ -5,8 +5,8 @@ import { useAnkiStore } from "@/stores/anki-store";
 
 /**
  * Anki mining away from the reader (the Words page and its lookup panel). No
- * live match means no cloze and no screenshot: only the sentence and book title
- * stored with the word.
+ * live match means no cloze: only the sentence and book title stored with the
+ * word.
  */
 
 interface Context {
@@ -27,11 +27,10 @@ export async function mineEntry(entry: DictionaryEntry, ctx: Context = {}): Prom
       sentence: ctx.sentence ?? "",
       documentTitle: ctx.bookTitle ?? "",
       documentAuthor: "",
-      hasScreenshot: false,
     }),
   );
 
-  const res = await window.electronAPI.anki.addNote({ server: cfg.server, apiKey: cfg.apiKey }, note, null);
+  const res = await window.electronAPI.anki.addNote({ server: cfg.server, apiKey: cfg.apiKey }, note);
   // Either outcome means a card exists, so the word counts as mined.
   if (res.ok || /duplicate/i.test(res.error)) {
     window.electronAPI.vocab.markMined(entry.expression, entry.reading ?? "").catch(() => {});

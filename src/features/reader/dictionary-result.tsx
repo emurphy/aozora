@@ -4,7 +4,7 @@ import type { DictionaryEntry, KanjiEntry, LookupResult } from "@/lib/types";
 import type { MineStatus } from "@/lib/dictionary/anki-note";
 import { downstepNumber } from "@/lib/dictionary/pitch";
 import { distributeFurigana } from "@/lib/dictionary/furigana";
-import { DICT_SCOPE_ATTR } from "@/lib/dictionary/dict-styles";
+import { DICT_SCOPE_ATTR } from "@/lib/dictionary/gloss-style";
 import { StructuredGloss } from "./structured-gloss";
 import { PitchAccent } from "./pitch-accent";
 import { KanjiCard } from "./kanji-card";

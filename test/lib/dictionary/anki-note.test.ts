@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { AnkiConfig, DictionaryEntry, KanjiEntry } from "@/lib/types";
 import {
-  SCREENSHOT_SENTINEL,
   glossToHtml,
   glossToText,
   cardDataFromEntry,
@@ -17,7 +16,6 @@ const ctx: AnkiCardContext = {
   sentence: "私はパンを食べる。",
   documentTitle: "Test Book",
   documentAuthor: "Someone",
-  hasScreenshot: false,
 };
 
 const entry = (over: Partial<DictionaryEntry> = {}): DictionaryEntry => ({
@@ -42,8 +40,6 @@ const config = (fields: Record<string, string>, over: Partial<AnkiConfig> = {}):
   kanjiFields: {},
   tags: ["aozora"],
   duplicateBehavior: "prevent",
-  screenshot: false,
-  screenshotQuality: 90,
   ...over,
 });
 
@@ -70,11 +66,13 @@ describe("glossToText / glossToHtml", () => {
     expect(glossToHtml('a <b> & "c"')).toBe("a &lt;b&gt; &amp; &quot;c&quot;");
   });
 
-  it("keeps whitelisted structural tags but drops attributes and unknown wrappers", () => {
+  it("keeps whitelisted structural tags and inline styling, drops unknown wrappers", () => {
     const tree = { tag: "ul", content: [{ tag: "li", content: "one" }, { tag: "li", content: "two" }] };
     expect(glossToHtml(tree)).toBe("<ul><li>one</li><li>two</li></ul>");
-    // A styled span with data-* survives as a bare <span>; a custom wrapper is unwrapped.
-    expect(glossToHtml({ tag: "span", style: { color: "red" }, content: "x" })).toBe("<span>x</span>");
+    // Styling goes inline (a card carries no dictionary stylesheet); a custom wrapper is unwrapped.
+    expect(glossToHtml({ tag: "span", style: { color: "red", marginLeft: 0.5 }, content: "x" })).toBe(
+      '<span style="color: red; margin-left: 0.5em">x</span>',
+    );
     expect(glossToHtml({ tag: "unknownthing", content: "kept" })).toBe("kept");
   });
 
@@ -98,15 +96,16 @@ describe("renderField", () => {
     expect(renderField("{not-a-marker}", data)).toBe("{not-a-marker}");
   });
 
+  it("bolds the matched run in the marked sentence, and keeps the sentence whole without one", () => {
+    const live = cardDataFromEntry(entry(), { ...ctx, cloze: { prefix: "私はパンを", body: "食べる", suffix: "。" } });
+    expect(renderField("{sentence-marked}", live)).toBe("私はパンを<b>食べる</b>。");
+    // No live match (mined off the Words page): the whole sentence, unmarked.
+    expect(renderField("{sentence-marked}", data)).toBe("私はパンを食べる。");
+  });
+
   it("renders furigana as ruby and plain bracket notation", () => {
     expect(renderField("{furigana}", data)).toBe("<ruby>食<rt>た</rt></ruby>べる");
     expect(renderField("{furigana-plain}", data)).toBe("食[た]べる");
-  });
-
-  it("emits the screenshot sentinel only when a screenshot is present", () => {
-    expect(renderField("{screenshot}", data)).toBe("");
-    const withShot = cardDataFromEntry(entry(), { ...ctx, hasScreenshot: true });
-    expect(renderField("img:{screenshot}", withShot)).toBe(`img:${SCREENSHOT_SENTINEL}`);
   });
 });
 
@@ -128,6 +127,8 @@ describe("cardDataFromEntry", () => {
     );
     expect(data.pitchAccents).toBe("2, 0");
     expect(data.frequencies).toBe("123, 4");
+    // The repeated accent draws one graph, not two.
+    expect(data.pitchGraphs.match(/<svg/g)).toHaveLength(2);
   });
 
   it("numbers multiple glosses across dictionaries as an ordered list", () => {
@@ -135,7 +136,8 @@ describe("cardDataFromEntry", () => {
       entry({ byDict: [{ dictId: "d", dictTitle: "T", tags: [], glosses: ["to eat", "to live on"] }] }),
       ctx,
     );
-    expect(data.glossary).toBe("<ol><li>to eat</li><li>to live on</li></ol>");
+    // Each item is marked with its dictionary, for the stylesheet the note type carries.
+    expect(data.glossary).toBe('<ol><li data-aoz-dict="d">to eat</li><li data-aoz-dict="d">to live on</li></ol>');
     expect(data.glossaryPlain).toBe("to eat\nto live on");
   });
 

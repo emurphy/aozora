@@ -10,10 +10,9 @@
  * renders outside the reader's shadow root.
  */
 
-const STYLE_ATTR = "data-aoz-dict-style";
+import { DICT_SCOPE_ATTR } from "@/lib/dictionary/gloss-style";
 
-/** The marker attribute the popup puts on a gloss container so scoped CSS applies. */
-export const DICT_SCOPE_ATTR = "data-aoz-dict";
+const STYLE_ATTR = "data-aoz-dict-style";
 
 /** A `<style>` node holding one dictionary's CSS, scoped to its glosses. */
 function styleNode(dictId: string, css: string): HTMLStyleElement {

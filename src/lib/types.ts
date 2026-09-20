@@ -464,9 +464,6 @@ export interface AnkiConfig extends AnkiEndpoint {
   kanjiFields: Record<string, string>;
   tags: string[];
   duplicateBehavior: AnkiDuplicateBehavior;
-  screenshot: boolean;
-  /** JPEG quality 0–100 (PNG ignores it). */
-  screenshotQuality: number;
 }
 
 /** A note ready for AnkiConnect (fields already rendered from the templates). */
@@ -479,17 +476,23 @@ export interface AnkiNote {
 }
 
 /**
- * Screenshot capture accompanying an addNote call. The renderer can't capture
- * the window, so it asks the main process to grab this rect, store it via
- * AnkiConnect, and splice the stored filename into the field carrying the
- * screenshot sentinel.
+ * One of Aozora's own note types, ready to be created in Anki (see
+ * src/lib/dictionary/anki-model.ts). `templates` is the field → `{marker}`
+ * mapping written into the mining config once the model exists.
  */
-export interface AnkiScreenshotRequest {
-  /** Viewport rect (CSS px, device-independent) to crop to; null = whole page. */
-  rect: { x: number; y: number; width: number; height: number } | null;
-  format: "png" | "jpg";
-  quality: number;
+export interface AnkiModelSpec {
+  name: string;
+  /** Field names in creation order; Anki checks the first one for duplicates. */
+  fields: string[];
+  templates: Record<string, string>;
+  cardName: string;
+  front: string;
+  back: string;
+  css: string;
 }
+
+/** Result of creating a note type, or refreshing one that already exists. */
+export type AnkiModelResult = { ok: true; created: boolean } | { ok: false; error: string };
 
 /** Result of a connection test (the AnkiConnect `version` action). */
 export type AnkiTestResult = { ok: true; version: number } | { ok: false; error: string };

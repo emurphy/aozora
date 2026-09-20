@@ -1,6 +1,5 @@
-import { ipcMain, BrowserWindow } from "electron";
-import type { AnkiEndpoint, AnkiNote, AnkiScreenshotRequest, AnkiTestResult, AnkiAddResult } from "@/lib/types";
-import { SCREENSHOT_SENTINEL } from "@/lib/dictionary/anki-note";
+import { ipcMain } from "electron";
+import type { AnkiEndpoint, AnkiNote, AnkiTestResult, AnkiAddResult, AnkiModelSpec, AnkiModelResult } from "@/lib/types";
 
 /**
  * AnkiConnect IPC. The renderer owns the mining config and builds a note's
@@ -58,35 +57,6 @@ async function invoke<T>(endpoint: AnkiEndpoint, action: string, params: Record<
 
 const errMsg = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
-/**
- * Captures the sender window (optionally cropped to `rect`), stores it in Anki's
- * media collection via `storeMediaFile`, and returns the stored filename (Anki
- * may rename on collision, so we use what it returns). Null if capture fails.
- */
-async function captureAndStore(
-  endpoint: AnkiEndpoint,
-  win: BrowserWindow,
-  shot: AnkiScreenshotRequest,
-): Promise<string | null> {
-  const rect = shot.rect
-    ? {
-        x: Math.round(shot.rect.x),
-        y: Math.round(shot.rect.y),
-        width: Math.max(1, Math.round(shot.rect.width)),
-        height: Math.max(1, Math.round(shot.rect.height)),
-      }
-    : undefined;
-
-  const image = rect ? await win.webContents.capturePage(rect) : await win.webContents.capturePage();
-  if (image.isEmpty()) return null;
-
-  const isJpg = shot.format === "jpg";
-  const buffer = isJpg ? image.toJPEG(Math.max(1, Math.min(100, shot.quality))) : image.toPNG();
-  const filename = `aozora_screenshot_${Date.now()}.${isJpg ? "jpg" : "png"}`;
-  // storeMediaFile wants raw base64 (no `data:` prefix); returns the actual name.
-  return invoke<string>(endpoint, "storeMediaFile", { filename, data: buffer.toString("base64") });
-}
-
 export const registerAnkiIpc = (): void => {
   // Connection test: the `version` handshake doubles as a reachability probe.
   ipcMain.handle("anki:test", async (_event, endpoint: AnkiEndpoint): Promise<AnkiTestResult> => {
@@ -105,26 +75,46 @@ export const registerAnkiIpc = (): void => {
     invoke<string[]>(endpoint, "modelFieldNames", { modelName: model }),
   );
 
-  // Add one note. If a screenshot is requested, capture + store it first and
-  // splice the returned filename into whichever field carries the sentinel.
-  ipcMain.handle(
-    "anki:add-note",
-    async (event, endpoint: AnkiEndpoint, note: AnkiNote, screenshot: AnkiScreenshotRequest | null): Promise<AnkiAddResult> => {
-      try {
-        const fields = { ...note.fields };
-        if (screenshot) {
-          const win = BrowserWindow.fromWebContents(event.sender);
-          const filename = win ? await captureAndStore(endpoint, win, screenshot) : null;
-          const replacement = filename ? `<img src="${filename}">` : "";
-          for (const key of Object.keys(fields)) {
-            if (fields[key].includes(SCREENSHOT_SENTINEL)) fields[key] = fields[key].split(SCREENSHOT_SENTINEL).join(replacement);
-          }
-        }
-        const noteId = await invoke<number>(endpoint, "addNote", { note: { ...note, fields } });
-        return { ok: true, noteId };
-      } catch (err) {
-        return { ok: false, error: errMsg(err) };
+  // Install one of Aozora's note types, or bring an existing one up to date.
+  // Fields are only ever added, never removed or reordered, so refreshing the
+  // design can't destroy notes the user already has.
+  ipcMain.handle("anki:ensure-model", async (_event, endpoint: AnkiEndpoint, spec: AnkiModelSpec): Promise<AnkiModelResult> => {
+    try {
+      const names = await invoke<string[]>(endpoint, "modelNames");
+      if (!names.includes(spec.name)) {
+        await invoke(endpoint, "createModel", {
+          modelName: spec.name,
+          inOrderFields: spec.fields,
+          css: spec.css,
+          cardTemplates: [{ Name: spec.cardName, Front: spec.front, Back: spec.back }],
+        });
+        return { ok: true, created: true };
       }
-    },
-  );
+
+      const existing = await invoke<string[]>(endpoint, "modelFieldNames", { modelName: spec.name });
+      for (const [index, fieldName] of spec.fields.entries()) {
+        if (!existing.includes(fieldName)) await invoke(endpoint, "modelFieldAdd", { modelName: spec.name, fieldName, index });
+      }
+      // A model carried over from an earlier version (or made by hand) may name
+      // its card something else; rewrite that one rather than adding a second.
+      const templates = await invoke<Record<string, unknown>>(endpoint, "modelTemplates", { modelName: spec.name });
+      const cardName = spec.cardName in templates ? spec.cardName : (Object.keys(templates)[0] ?? spec.cardName);
+      await invoke(endpoint, "updateModelTemplates", {
+        model: { name: spec.name, templates: { [cardName]: { Front: spec.front, Back: spec.back } } },
+      });
+      await invoke(endpoint, "updateModelStyling", { model: { name: spec.name, css: spec.css } });
+      return { ok: true, created: false };
+    } catch (err) {
+      return { ok: false, error: errMsg(err) };
+    }
+  });
+
+  ipcMain.handle("anki:add-note", async (_event, endpoint: AnkiEndpoint, note: AnkiNote): Promise<AnkiAddResult> => {
+    try {
+      const noteId = await invoke<number>(endpoint, "addNote", { note });
+      return { ok: true, noteId };
+    } catch (err) {
+      return { ok: false, error: errMsg(err) };
+    }
+  });
 };

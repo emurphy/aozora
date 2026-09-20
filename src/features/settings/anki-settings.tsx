@@ -4,13 +4,13 @@ import { Loader2, RefreshCw, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "cn";
 import { useAnkiStore } from "@/stores/anki-store";
 import { Group } from "./group";
 import { FIELD_MARKERS, KANJI_FIELD_MARKERS } from "@/lib/dictionary/anki-note";
-import type { AnkiDuplicateBehavior } from "@/lib/types";
+import { KANJI_MODEL, TERM_MODEL, withDictionaryStyles } from "@/lib/dictionary/anki-model";
+import type { AnkiDuplicateBehavior, AnkiModelSpec } from "@/lib/types";
 
 // Human labels for the term field markers offered per Anki field.
 const MARKER_LABELS: Record<string, string> = {
@@ -21,6 +21,7 @@ const MARKER_LABELS: Record<string, string> = {
   glossary: "Definition (HTML)",
   "glossary-plain": "Definition (text)",
   sentence: "Sentence",
+  "sentence-marked": "Sentence (word marked)",
   "cloze-prefix": "Cloze prefix",
   "cloze-body": "Cloze body",
   "cloze-suffix": "Cloze suffix",
@@ -32,7 +33,6 @@ const MARKER_LABELS: Record<string, string> = {
   dictionary: "Dictionary",
   "document-title": "Book title",
   "document-author": "Book author",
-  screenshot: "Screenshot",
 };
 
 // Human labels for the kanji field markers.
@@ -46,12 +46,12 @@ const KANJI_MARKER_LABELS: Record<string, string> = {
   tags: "Tags",
   dictionary: "Dictionary",
   sentence: "Sentence",
+  "sentence-marked": "Sentence (kanji marked)",
   "cloze-prefix": "Cloze prefix",
   "cloze-body": "Cloze body",
   "cloze-suffix": "Cloze suffix",
   "document-title": "Book title",
   "document-author": "Book author",
-  screenshot: "Screenshot",
 };
 
 /** Guesses a sensible term marker for an Anki field from its name (à la Yomitan). */
@@ -62,7 +62,6 @@ function guessMarker(fieldName: string, isFirst: boolean): string {
   if (/furigana/.test(n)) return "furigana";
   if (/pitch|accent/.test(n)) return "pitch-accents";
   if (/freq/.test(n)) return "frequencies";
-  if (/image|picture|screenshot/.test(n)) return "screenshot";
   if (/meaning|definition|gloss|back|english|translation/.test(n)) return "glossary";
   if (/word|expression|term|vocab|kanji|front|target/.test(n)) return "expression";
   return isFirst ? "expression" : "";
@@ -76,7 +75,6 @@ function guessKanjiMarker(fieldName: string, isFirst: boolean): string {
   if (/kun.?yomi|kun.?reading/.test(n)) return "kunyomi";
   if (/stroke/.test(n)) return "stroke-count";
   if (/freq/.test(n)) return "frequencies";
-  if (/image|picture|screenshot/.test(n)) return "screenshot";
   if (/meaning|definition|gloss|keyword|back|english/.test(n)) return "glossary";
   if (/character|kanji|front|target|word/.test(n)) return "character";
   return isFirst ? "character" : "";
@@ -251,8 +249,6 @@ export function AnkiSettings() {
   const kanjiFields = useAnkiStore((s) => s.kanjiFields);
   const tags = useAnkiStore((s) => s.tags);
   const duplicateBehavior = useAnkiStore((s) => s.duplicateBehavior);
-  const screenshot = useAnkiStore((s) => s.screenshot);
-  const screenshotQuality = useAnkiStore((s) => s.screenshotQuality);
 
   const setEnabled = useAnkiStore((s) => s.setEnabled);
   const setServer = useAnkiStore((s) => s.setServer);
@@ -267,8 +263,6 @@ export function AnkiSettings() {
   const setKanjiField = useAnkiStore((s) => s.setKanjiField);
   const setTags = useAnkiStore((s) => s.setTags);
   const setDuplicateBehavior = useAnkiStore((s) => s.setDuplicateBehavior);
-  const setScreenshot = useAnkiStore((s) => s.setScreenshot);
-  const setScreenshotQuality = useAnkiStore((s) => s.setScreenshotQuality);
 
   const [decks, setDecks] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
@@ -276,6 +270,7 @@ export function AnkiSettings() {
   const [kanjiModelFields, setKanjiModelFields] = useState<string[]>([]);
   const [testing, setTesting] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [installing, setInstalling] = useState("");
 
   const loadLists = useCallback(async () => {
     const endpoint = { server, apiKey };
@@ -303,6 +298,35 @@ export function AnkiSettings() {
       toast.error(res.error);
     }
   }, [server, apiKey, loadLists]);
+
+  /**
+   * Installs one of Aozora's note types in Anki and points the config at it.
+   * Selecting the model clears its field map, so the spec's mapping is written
+   * straight after, leaving nothing to configure by hand.
+   */
+  const installModel = useCallback(
+    async (spec: AnkiModelSpec, applyModel: (name: string) => void, applyFields: (fields: Record<string, string>) => void) => {
+      setInstalling(spec.name);
+      const res = await window.electronAPI.anki.ensureModel({ server, apiKey }, spec);
+      setInstalling("");
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      applyModel(spec.name);
+      applyFields(spec.templates);
+      void loadLists();
+      toast.success(res.created ? `Created the "${spec.name}" note type in Anki.` : `Updated the "${spec.name}" card design.`);
+    },
+    [server, apiKey, loadLists],
+  );
+
+  // The vocabulary card carries the imported dictionaries' own stylesheets, so
+  // glosses read on a card the way they do in the popup.
+  const installTermModel = useCallback(async () => {
+    const styles = await window.electronAPI.dictionary.getStyles().catch(() => []);
+    await installModel(withDictionaryStyles(TERM_MODEL, styles), setModel, setFields);
+  }, [installModel, setModel, setFields]);
 
   // Auto-connect on open when already enabled, so the dropdowns are populated.
   useEffect(() => {
@@ -365,6 +389,20 @@ export function AnkiSettings() {
           </Group>
 
           <Group title="Vocabulary cards">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-0.5">
+                <p className="text-xs">Aozora note type</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Build a ready-made note type with a designed card and map its fields for you. The card is styled with your dictionaries&apos;
+                  own stylesheets, so run this again after importing one; your notes are kept either way.
+                </p>
+              </div>
+              <Button size="sm" variant="outline" disabled={installing !== ""} onClick={() => void installTermModel()}>
+                {installing === TERM_MODEL.name && <Loader2 className="animate-spin" />}
+                Install {TERM_MODEL.name} note type
+              </Button>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <Select value={deck || undefined} onValueChange={setDeck}>
                 <SelectTrigger className="w-full">
@@ -398,9 +436,20 @@ export function AnkiSettings() {
           </Group>
 
           <Group title="Kanji cards (optional)">
-            <p className="text-[11px] text-muted-foreground">
-              Pick a deck and note type to enable the Anki button on the popup&apos;s kanji breakdown. Leave blank to disable.
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-[11px] text-muted-foreground">
+                Pick a deck and note type to enable the Anki button on the popup&apos;s kanji breakdown. Leave blank to disable.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={installing !== ""}
+                onClick={() => void installModel(KANJI_MODEL, setKanjiModel, setKanjiFields)}
+              >
+                {installing === KANJI_MODEL.name && <Loader2 className="animate-spin" />}
+                Install {KANJI_MODEL.name} note type
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <Select value={kanjiDeck || undefined} onValueChange={setKanjiDeck}>
                 <SelectTrigger className="w-full">
@@ -468,22 +517,6 @@ export function AnkiSettings() {
               </Select>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <p className="text-xs">Screenshot</p>
-                <p className="text-[11px] text-muted-foreground">Attach an image of the sentence to the card.</p>
-              </div>
-              <Switch checked={screenshot} onCheckedChange={setScreenshot} aria-label="Attach screenshot" />
-            </div>
-            {screenshot && (
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-xs">Image quality</span>
-                <div className="flex w-56 items-center gap-3">
-                  <Slider value={[screenshotQuality]} min={30} max={100} step={5} onValueChange={([v]) => setScreenshotQuality(v)} />
-                  <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">{screenshotQuality}</span>
-                </div>
-              </div>
-            )}
           </Group>
         </>
       )}

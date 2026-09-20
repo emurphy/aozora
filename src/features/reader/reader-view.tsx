@@ -187,7 +187,6 @@ export function ReaderView() {
   // hostRef/modeRef but keep their own timers/refs. Character position stays here.
   const {
     lookup,
-    capturing,
     clearLookup,
     mineEntry,
     mineKanji,
@@ -860,7 +859,6 @@ export function ReaderView() {
           onMine={ankiEnabled ? mineEntry : undefined}
           onMineKanji={ankiKanjiEnabled ? mineKanji : undefined}
           onSpeak={ttsEnabled ? speakText : undefined}
-          hiddenForCapture={capturing}
         />
         {sentencePlay && (
           <button
