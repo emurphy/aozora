@@ -21,7 +21,7 @@ import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { normalizeSearch } from "@/lib/format";
 import { coverPlaceholder } from "@/lib/cover";
-import { FAVORITES_COLLECTION_ID, type Book, type Collection } from "@/lib/types";
+import { FAVORITES_COLLECTION_ID, FAVORITES_COLLECTION_NAME, type Book, type Collection } from "@/lib/types";
 
 /**
  * Create a collection, or rename the one passed in. `onCreated` receives the new
@@ -172,8 +172,8 @@ function ShelfRow({
 
 /**
  * Which shelves one book sits on. Toggles apply immediately (there is nothing to
- * undo), so the dialog only has a close button. Favorites is listed alongside
- * the real collections even though it is the `favorite` flag underneath.
+ * undo), so the dialog only has a close button. The built-in shelf is listed
+ * alongside the real collections even though it is the `favorite` flag underneath.
  */
 export function BookCollectionsDialog({ book, open, onOpenChange }: { book: Book; open: boolean; onOpenChange: (open: boolean) => void }) {
   const collections = useCollectionsStore((s) => s.collections);
@@ -218,11 +218,11 @@ export function BookCollectionsDialog({ book, open, onOpenChange }: { book: Book
 
         <div className="max-h-64 overflow-y-auto border">
           <ShelfRow
-            label="Favorites"
+            label={FAVORITES_COLLECTION_NAME}
             icon={Heart}
             count={favoriteCount}
             checked={book.favorite}
-            onToggle={() => toggleFavorite(book.id).catch(() => toast.error("Failed to update favorite"))}
+            onToggle={() => toggleFavorite(book.id).catch(() => toast.error(`Failed to update ${FAVORITES_COLLECTION_NAME}`))}
           />
           {collections.map((c) => (
             <ShelfRow key={c.id} label={c.name} count={c.bookIds.length} checked={memberOf.has(c.id)} onToggle={() => toggle(c.id)} />
@@ -280,7 +280,7 @@ function PickerTile({ book, checked, onToggle }: { book: Book; checked: boolean;
   );
 }
 
-/** The shelf a picker is filling: a collection row, or Favorites. */
+/** The shelf a picker is filling: a collection row, or the built-in one. */
 export interface ShelfTarget {
   id: string;
   name: string;
@@ -290,8 +290,8 @@ export interface ShelfTarget {
 /**
  * Fills a shelf from the library in one pass: search, tick what belongs, save.
  * Members come pre-ticked, so unticking removes them too. A collection is
- * written in one call; Favorites has no membership table, so its diff goes out
- * as one favorite flag per changed book.
+ * written in one call; the built-in shelf has no membership table, so its diff
+ * goes out as one favorite flag per changed book.
  */
 export function CollectionBooksDialog({
   shelf,

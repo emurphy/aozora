@@ -9,14 +9,14 @@ import { useCollectionsStore } from "@/stores/collections-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { coverPlaceholder } from "@/lib/cover";
-import { FAVORITES_COLLECTION_ID, type Book, type Collection } from "@/lib/types";
+import { FAVORITES_COLLECTION_ID, FAVORITES_COLLECTION_NAME, type Book, type Collection } from "@/lib/types";
 
 /** What a shelf tile needs, whether it comes from a row or from the favorite flag. */
 interface Shelf {
   id: string;
   name: string;
   books: Book[];
-  /** Favorites: renaming and deleting it makes no sense. */
+  /** The built-in shelf: renaming and deleting it makes no sense. */
   builtIn?: boolean;
 }
 
@@ -123,7 +123,7 @@ function ShelfTile({
 }
 
 /**
- * The collections page: every shelf as a tile, Favorites first. Opening one
+ * The collections page: every shelf as a tile, the built-in one first. Opening one
  * hands off to the library grid with `collectionFilter` set, so browsing a
  * collection reuses the same search / sort / view controls as the library.
  */
@@ -147,7 +147,7 @@ export function CollectionsView() {
   const shelves = useMemo<Shelf[]>(() => {
     const byId = new Map(books.map((b) => [b.id, b]));
     return [
-      { id: FAVORITES_COLLECTION_ID, name: "Favorites", builtIn: true, books: books.filter((b) => b.favorite) },
+      { id: FAVORITES_COLLECTION_ID, name: FAVORITES_COLLECTION_NAME, builtIn: true, books: books.filter((b) => b.favorite) },
       ...collections.map((c) => ({
         id: c.id,
         name: c.name,
@@ -205,7 +205,8 @@ export function CollectionsView() {
 
           {collections.length === 0 && (
             <p className="mt-6 text-xs text-muted-foreground">
-              Collections are yours to shape: one per series, per publisher, per anything. Favorites is always here.
+              Collections are yours to shape: one per series, per publisher, per anything. {FAVORITES_COLLECTION_NAME} is always
+              here.
             </p>
           )}
         </div>

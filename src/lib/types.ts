@@ -67,9 +67,13 @@ export interface Collection {
 /**
  * The built-in shelf. Backed by the `books.favorite` column rather than a
  * `collections` row, so libraries that already have favorites keep them; it is
- * only shown alongside the real collections.
+ * only shown alongside the real collections. The code keeps the column's
+ * vocabulary (`favorite`) throughout; the shelf is only labelled differently.
  */
 export const FAVORITES_COLLECTION_ID = "favorites";
+
+/** What that shelf is called in the UI. */
+export const FAVORITES_COLLECTION_NAME = "Backlog";
 
 /** A file chosen via the native picker. */
 export interface PickedFile {

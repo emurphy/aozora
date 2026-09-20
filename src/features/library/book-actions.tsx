@@ -19,7 +19,7 @@ import { useUiStore } from "@/stores/ui-store";
 import { readingStatus } from "@/lib/format";
 import { BookEditDialog } from "./book-edit-dialog";
 import { BookCollectionsDialog } from "./collection-dialogs";
-import type { Book } from "@/lib/types";
+import { FAVORITES_COLLECTION_NAME, type Book } from "@/lib/types";
 
 interface ActionItem {
   key: string;
@@ -73,8 +73,8 @@ function useBookActions(book: Book): BookActionsState {
 
   const handleToggleFavorite = () => {
     toggleFavorite(book.id)
-      .then(() => toast.success(book.favorite ? "Removed from favorites" : "Added to favorites"))
-      .catch(() => toast.error("Failed to update favorite"));
+      .then(() => toast.success(book.favorite ? `Removed from ${FAVORITES_COLLECTION_NAME}` : `Added to ${FAVORITES_COLLECTION_NAME}`))
+      .catch(() => toast.error(`Failed to update ${FAVORITES_COLLECTION_NAME}`));
   };
 
   // Curating the shelf you are looking at deserves one click, so offer it only
@@ -86,8 +86,8 @@ function useBookActions(book: Book): BookActionsState {
   const items = [
     { key: "edit", label: "Edit details", icon: Pencil, onSelect: () => setEditOpen(true) },
     book.favorite
-      ? { key: "favorite", label: "Remove from favorites", icon: HeartOff, onSelect: handleToggleFavorite }
-      : { key: "favorite", label: "Add to favorites", icon: Heart, onSelect: handleToggleFavorite },
+      ? { key: "favorite", label: `Remove from ${FAVORITES_COLLECTION_NAME}`, icon: HeartOff, onSelect: handleToggleFavorite }
+      : { key: "favorite", label: `Add to ${FAVORITES_COLLECTION_NAME}`, icon: Heart, onSelect: handleToggleFavorite },
     { key: "collections", label: "Collections…", icon: LibraryBig, onSelect: () => setCollectionsOpen(true) },
     openCollection && {
       key: "uncollect",

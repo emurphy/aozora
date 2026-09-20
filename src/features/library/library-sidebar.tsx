@@ -6,7 +6,7 @@ import { useCollectionsStore } from "@/stores/collections-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore, type StatusFilter } from "@/stores/ui-store";
 import { CollectionFormDialog } from "./collection-dialogs";
-import { FAVORITES_COLLECTION_ID } from "@/lib/types";
+import { FAVORITES_COLLECTION_ID, FAVORITES_COLLECTION_NAME } from "@/lib/types";
 import aozoraLogo from "@/assets/aozora-logo.png";
 
 const STATUS_NAV: { value: StatusFilter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -134,7 +134,7 @@ export function LibrarySidebar() {
         <nav className="max-h-44 space-y-0.5 overflow-y-auto [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:transition-colors hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
           <NavItem
             icon={Heart}
-            label="Favorites"
+            label={FAVORITES_COLLECTION_NAME}
             count={counts.favorites}
             active={inLibrary && collectionFilter === FAVORITES_COLLECTION_ID}
             onClick={() => browse({ collection: FAVORITES_COLLECTION_ID })}

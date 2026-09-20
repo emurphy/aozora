@@ -15,7 +15,7 @@ import { useUiStore } from "@/stores/ui-store";
 import { useCollectionsStore } from "@/stores/collections-store";
 import { useLibraryPrefs, SORT_OPTIONS, type SortKey, type ViewMode, type CardSize } from "@/stores/library-prefs-store";
 import { normalizeSearch, readingStatus } from "@/lib/format";
-import { FAVORITES_COLLECTION_ID, isBookFileName, type Book } from "@/lib/types";
+import { FAVORITES_COLLECTION_ID, FAVORITES_COLLECTION_NAME, isBookFileName, type Book } from "@/lib/types";
 
 const STATUS_TABS = [
   { value: "all", label: "All" },
@@ -105,15 +105,15 @@ export function LibraryView() {
     loadBooks().catch(() => toast.error("Failed to load library"));
   }, [loadBooks]);
 
-  // The open collection, if any. Favorites is the `favorite` flag, not a row.
+  // The open collection, if any. The built-in shelf is the `favorite` flag, not a row.
   const collection = useMemo(() => collections.find((c) => c.id === collectionFilter) ?? null, [collections, collectionFilter]);
   const collectionMembers = useMemo(() => (collection ? new Set(collection.bookIds) : null), [collection]);
 
-  // The shelf on screen, if any, as the book picker wants it. Favorites has no
-  // membership rows, so its members are read off the favorite flag.
+  // The shelf on screen, if any, as the book picker wants it. The built-in shelf
+  // has no membership rows, so its members are read off the favorite flag.
   const shelf = useMemo<ShelfTarget | null>(() => {
     if (collectionFilter === FAVORITES_COLLECTION_ID) {
-      return { id: FAVORITES_COLLECTION_ID, name: "Favorites", bookIds: books.filter((b) => b.favorite).map((b) => b.id) };
+      return { id: FAVORITES_COLLECTION_ID, name: FAVORITES_COLLECTION_NAME, bookIds: books.filter((b) => b.favorite).map((b) => b.id) };
     }
     return collection ? { id: collection.id, name: collection.name, bookIds: collection.bookIds } : null;
   }, [collectionFilter, collection, books]);
