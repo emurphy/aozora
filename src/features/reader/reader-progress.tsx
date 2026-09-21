@@ -209,10 +209,11 @@ export function ReaderProgress({
         {labelAt(scrub ?? char)}
       </span>
 
+      {/* Taller than it looks: the negative margin spends the row padding on grab area, not height. */}
       <div
         ref={barRef}
         data-aoz-scrub
-        className="relative h-4 flex-1 cursor-pointer"
+        className="relative h-8 -my-2 flex-1 cursor-pointer"
         onPointerMove={onPointerMove}
         onPointerLeave={() => {
           if (draggingRef.current) return;
@@ -230,7 +231,7 @@ export function ReaderProgress({
       >
         <Slider
           aria-label="Reading position"
-          className="absolute inset-x-0 top-1"
+          className="absolute inset-0"
           value={[display]}
           min={0}
           max={max}
@@ -254,12 +255,12 @@ export function ReaderProgress({
 
         <div className="pointer-events-none absolute inset-0">
           {notches.map((ratio, i) => (
-            <span key={`${i}:${ratio}`} className="absolute top-1 h-1 w-px bg-background" style={{ left: `${flip(ratio) * 100}%` }} />
+            <span key={`${i}:${ratio}`} className="absolute top-1/2 h-1 w-px -translate-y-1/2 bg-background" style={{ left: `${flip(ratio) * 100}%` }} />
           ))}
           {marks.map((m) => (
             <span
               key={m.key}
-              className={cn("absolute top-2.5 h-1 w-0.5", !m.color && "bg-foreground/45")}
+              className={cn("absolute top-1/2 h-1 w-0.5", !m.color && "bg-foreground/45")}
               style={{ left: `${flip(m.ratio) * 100}%`, backgroundColor: m.color ?? undefined }}
             />
           ))}
