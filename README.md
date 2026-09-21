@@ -203,6 +203,40 @@ yarn start
 yarn make
 ```
 
+### macOS
+
+Aozora builds and runs on macOS (Apple Silicon) from source. You need the Xcode Command
+Line Tools (`xcode-select --install`, or accept the Xcode license with
+`sudo xcodebuild -license accept`). They provide `git` and the compiler `better-sqlite3`
+may need. `yarn.lock` pulls one package over SSH from GitHub, so either have a GitHub SSH
+key set up or run the install as
+`GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_0=ssh://git@github.com/ yarn install`.
+
+```bash
+yarn install
+yarn start                                     # development
+yarn package --platform=darwin --arch=arm64    # → out/Aozora-darwin-arm64/Aozora.app
+yarn make --platform=darwin --arch=arm64       # → out/make/zip/darwin/arm64/*.zip
+open out/Aozora-darwin-arm64/Aozora.app
+```
+
+The local build is ad-hoc signed (not notarized), which is enough to run it on the Mac
+that built it. On first launch macOS asks for access to the "Aozora Safe Storage" keychain
+item (Electron's encryption key); choose **Always Allow**. Each rebuild changes the ad-hoc
+signature, so it asks again after a rebuild. A copy downloaded from elsewhere is
+quarantined by Gatekeeper; clear that with `xattr -dr com.apple.quarantine Aozora.app`.
+
+On macOS the app uses the native menu bar (**File → Open…** ⌘O, **Settings…** ⌘,,
+**View → Enter Full Screen** ⌃⌘F) and the window's traffic lights. Books also open from
+Finder (**Open With → Aozora**, or drop one on the Dock icon). The lookup/read-aloud keys
+are Shift, Option (Alt) or Control.
+
+VOICEVOX and Anki work the same as on Windows. Install the macOS build of
+[VOICEVOX](https://voicevox.hiroshiba.jp/) and keep it running. If AnkiConnect stops
+responding while Anki is in the background, macOS App Nap is throttling it; disable App
+Nap for Anki with `defaults write net.ankiweb.dtop NSAppSleepDisabled -bool true` and
+restart Anki.
+
 ## License
 
 Aozora is licensed under the **GNU General Public License v3.0** (see [`LICENSE`](./LICENSE)).
