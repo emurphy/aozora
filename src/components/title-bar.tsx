@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { useSettingsStore, THEMES } from "@/stores/settings-store";
 import { useDictionaryImportStore } from "@/stores/dictionary-import-store";
 import { AboutDialog } from "@/components/about-dialog";
+import { isMac } from "@/lib/platform";
 
 const win = () => window.electronAPI?.window;
 
@@ -52,7 +53,9 @@ export function TitleBar({ brand = "Aozora 青空", tagline = "青空の下で�
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
         className="flex h-8 shrink-0 select-none items-center justify-between border-b border-border bg-background"
       >
-        <div className="flex items-center gap-1 px-3 text-xs font-medium text-muted-foreground">
+        {/* macOS draws native traffic lights at the bar's left edge, so the bar
+            skips its own window buttons there and indents the brand past them. */}
+        <div className={cn("flex items-center gap-1 px-3 text-xs font-medium text-muted-foreground", isMac() && "pl-20")}>
           <span className="font-bold">{brand}</span>
           {tagline && (
             <>
@@ -84,17 +87,21 @@ export function TitleBar({ brand = "Aozora 青空", tagline = "青空の下で�
             <Info className="size-3.5" />
           </ControlButton>
 
-          <span aria-hidden className="mx-1 h-4 w-px self-center bg-border" />
+          {!isMac() && (
+            <>
+              <span aria-hidden className="mx-1 h-4 w-px self-center bg-border" />
 
-          <ControlButton aria-label="Minimize" onClick={() => win()?.minimize()}>
-            <MinusIcon className="size-3.5" />
-          </ControlButton>
-          <ControlButton aria-label={isMaximized ? "Restore" : "Maximize"} onClick={() => win()?.toggleMaximize()}>
-            {isMaximized ? <CopyIcon className="size-3" /> : <SquareIcon className="size-3" />}
-          </ControlButton>
-          <ControlButton aria-label="Close" onClick={() => win()?.close()} className="hover:bg-destructive hover:text-white">
-            <XIcon className="size-3.5" />
-          </ControlButton>
+              <ControlButton aria-label="Minimize" onClick={() => win()?.minimize()}>
+                <MinusIcon className="size-3.5" />
+              </ControlButton>
+              <ControlButton aria-label={isMaximized ? "Restore" : "Maximize"} onClick={() => win()?.toggleMaximize()}>
+                {isMaximized ? <CopyIcon className="size-3" /> : <SquareIcon className="size-3" />}
+              </ControlButton>
+              <ControlButton aria-label="Close" onClick={() => win()?.close()} className="hover:bg-destructive hover:text-white">
+                <XIcon className="size-3.5" />
+              </ControlButton>
+            </>
+          )}
         </div>
       </header>
 

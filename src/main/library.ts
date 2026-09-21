@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { libraryStore } from "./services/library-store.js";
 import { resizeCover } from "./cover-image.js";
-import { BOOK_EXTENSIONS, storedBookName, type Book, type AddBookPayload, type AddBookResult, type UpdateBookPayload, type ProgressUpdate, type AddBookmarkPayload, type AddAnnotationPayload, type UpdateAnnotationPayload } from "@/lib/types";
+import { BOOK_EXTENSIONS, storedBookName, type Book, type PickedFile, type AddBookPayload, type AddBookResult, type UpdateBookPayload, type ProgressUpdate, type AddBookmarkPayload, type AddAnnotationPayload, type UpdateAnnotationPayload } from "@/lib/types";
 
 const COVER_MAX_WIDTH = 300;
 const COVER_JPEG_QUALITY = 90;
@@ -36,6 +36,15 @@ const EXT_TO_MIME: Record<string, string> = {
  * anything that ran in the renderer could read the whole disk through them.
  */
 const userChosenPaths = new Set<string>();
+
+/**
+ * Authorizes a path the user handed us (native picker, or a file macOS opened
+ * with Aozora from Finder) and describes it for the renderer's import.
+ */
+export function allowUserFile(filePath: string): PickedFile {
+  userChosenPaths.add(path.resolve(filePath));
+  return { path: filePath, name: path.basename(filePath), size: fs.statSync(filePath).size };
+}
 
 function assertUserChosen(filePath: unknown): string {
   if (typeof filePath !== "string" || !userChosenPaths.has(path.resolve(filePath))) {
@@ -127,14 +136,7 @@ export const registerLibraryIpc = (): void => {
       ],
     });
     if (result.canceled) return [];
-    return result.filePaths.map((p) => {
-      userChosenPaths.add(path.resolve(p));
-      return {
-        path: p,
-        name: path.basename(p),
-        size: fs.statSync(p).size,
-      };
-    });
+    return result.filePaths.map(allowUserFile);
   });
 
   // Dropped files: the preload resolves the path renderer-side and reports it

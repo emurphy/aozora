@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { TitleBar } from "@/components/title-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -9,13 +10,37 @@ import { StatsView } from "@/features/stats/stats-view";
 import { WordsView } from "@/features/words/words-view";
 import { DictionariesView } from "@/features/dictionaries/dictionaries-view";
 import { SettingsView } from "@/features/settings/settings-view";
+import { reportImport } from "@/features/library/import-report";
 import { useReaderStore } from "@/stores/reader-store";
+import { useLibraryStore, type ImportSummary } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useSettingsStore, THEMES } from "@/stores/settings-store";
 import { useFontsStore } from "@/stores/fonts-store";
 import { useDictionaryImportStore } from "@/stores/dictionary-import-store";
 import { useCollectionsStore } from "@/stores/collections-store";
 import { syncDictionaryStyles } from "@/lib/dictionary/dict-styles";
+
+/**
+ * Runs an import from outside the library page (File → Open…, Finder). A single
+ * book opens in the reader (a duplicate opens its existing copy); several land
+ * the user on the library. Navigation waits for the result, so cancelling the
+ * picker leaves whatever was open alone.
+ */
+async function importAndOpen(run: () => Promise<ImportSummary>): Promise<void> {
+  if (useLibraryStore.getState().importing) return;
+  try {
+    const summary = await run();
+    reportImport(summary);
+    if (summary.books.length === 1) {
+      useReaderStore.getState().open(summary.books[0]);
+    } else if (summary.books.length > 1) {
+      useReaderStore.getState().close();
+      useUiStore.getState().setView("library");
+    }
+  } catch {
+    toast.error("Import failed");
+  }
+}
 
 export function App() {
   const reading = useReaderStore((s) => s.currentBook !== null);
@@ -32,6 +57,29 @@ export function App() {
     const setFullscreen = useUiStore.getState().setFullscreen;
     api.isFullscreen().then(setFullscreen);
     return api.onFullscreenChanged(setFullscreen);
+  }, []);
+
+  // macOS menu bar: File → Open… imports through the same picker as the library's
+  // Import button; Settings… (⌘,) jumps to settings. Settings leaves the reader
+  // first, since the page doesn't show over it.
+  useEffect(() => {
+    const api = window.electronAPI?.window;
+    if (!api) return;
+    return api.onMenuCommand((command) => {
+      if (command === "settings") {
+        useReaderStore.getState().close();
+        useUiStore.getState().setView("settings");
+      } else {
+        void importAndOpen(() => useLibraryStore.getState().importBooks());
+      }
+    });
+  }, []);
+
+  // Books macOS opened with the app (Finder double-click / Open With / Dock drop).
+  useEffect(() => {
+    const api = window.electronAPI?.library;
+    if (!api) return;
+    return api.onOpenFiles((files) => void importAndOpen(() => useLibraryStore.getState().importFiles(files)));
   }, []);
 
   // The sidebar shows collections on every page, so mirror them once here rather

@@ -18,6 +18,7 @@ import type {
   DictionaryImportProgress,
   DictionaryInfo,
   LookupResult,
+  MenuCommand,
   PickedFile,
   ProgressUpdate,
   ReadingSession,
@@ -43,6 +44,7 @@ import type {
  * `src/preload/*`, which documents what each call does.
  */
 export interface WindowApi {
+  platform: NodeJS.Platform;
   minimize(): void;
   toggleMaximize(): void;
   close(): void;
@@ -52,10 +54,12 @@ export interface WindowApi {
   openExternal(url: string): Promise<void>;
   onMaximizedChanged(callback: (maximized: boolean) => void): () => void;
   onFullscreenChanged(callback: (fullscreen: boolean) => void): () => void;
+  onMenuCommand(callback: (command: MenuCommand) => void): () => void;
 }
 
 export interface LibraryApi {
   pickFiles(): Promise<PickedFile[]>;
+  onOpenFiles(callback: (files: PickedFile[]) => void): () => void;
   getPathForFile(file: File): string;
   readFile(filePath: string): Promise<Uint8Array>;
   addBook(payload: AddBookPayload): Promise<AddBookResult>;

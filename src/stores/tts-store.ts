@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { altKeyLabel, ctrlKeyLabel } from "@/lib/platform";
 import type { VoicevoxParams } from "@/lib/types";
 
 /**
@@ -19,8 +20,8 @@ export const DEFAULT_VOICEVOX_SERVER = "http://127.0.0.1:50021";
 export type SentenceHotkey = "shift" | "alt" | "ctrl";
 
 export const SENTENCE_HOTKEYS: { value: SentenceHotkey; label: string }[] = [
-  { value: "alt", label: "Hold Alt" },
-  { value: "ctrl", label: "Hold Ctrl" },
+  { value: "alt", label: `Hold ${altKeyLabel()}` },
+  { value: "ctrl", label: `Hold ${ctrlKeyLabel()}` },
   { value: "shift", label: "Hold Shift" },
 ];
 

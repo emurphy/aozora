@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BookCard } from "./book-card";
 import { BookRow } from "./book-row";
 import { LibrarySidebar } from "./library-sidebar";
+import { reportImport } from "./import-report";
 import { CollectionBooksDialog, type ShelfTarget } from "./collection-dialogs";
 import { useLibraryStore } from "@/stores/library-store";
 import { useReaderStore } from "@/stores/reader-store";
@@ -155,12 +156,6 @@ export function LibraryView() {
       importToastId.current = null;
     }
   }, [importing, importProgress]);
-
-  const reportImport = ({ added, duplicate, failed }: { added: number; duplicate: number; failed: string[] }) => {
-    if (added) toast.success(`Imported ${added} book${added > 1 ? "s" : ""}`);
-    if (duplicate) toast.info(`Skipped ${duplicate} book${duplicate > 1 ? "s" : ""} already in your library`);
-    if (failed.length) toast.error(`Could not import: ${failed.join(", ")}`);
-  };
 
   const handleImport = async () => {
     try {

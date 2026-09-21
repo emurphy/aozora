@@ -10,11 +10,13 @@ interface ImportProgress {
   total: number;
 }
 
-interface ImportSummary {
+export interface ImportSummary {
   added: number;
   /** Files skipped because the same bytes are already in the library. */
   duplicate: number;
   failed: string[];
+  /** Library records for the files that went in, duplicates included (for opening them). */
+  books: Book[];
 }
 
 interface LibraryState {
@@ -25,6 +27,7 @@ interface LibraryState {
   loadBooks: () => Promise<void>;
   importBooks: () => Promise<ImportSummary>;
   importDroppedFiles: (fileList: FileList) => Promise<ImportSummary>;
+  importFiles: (files: PickedFile[]) => Promise<ImportSummary>;
   setFavorite: (id: string, favorite: boolean) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
   removeBook: (id: string) => Promise<void>;
@@ -42,6 +45,7 @@ type LibrarySet = (partial: Partial<LibraryState>) => void;
 async function importPaths(files: PickedFile[], set: LibrarySet): Promise<ImportSummary> {
   set({ importing: true, importProgress: { current: 0, total: files.length } });
   const failed: string[] = [];
+  const imported: Book[] = [];
   let added = 0;
   let duplicate = 0;
   try {
@@ -63,6 +67,7 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
         });
         if (result.duplicate) duplicate += 1;
         else added += 1;
+        if (result.book) imported.push(result.book);
       } catch (err) {
         console.error(`Failed to import ${file.name}`, err);
         failed.push(file.name);
@@ -75,7 +80,7 @@ async function importPaths(files: PickedFile[], set: LibrarySet): Promise<Import
   } finally {
     set({ importing: false, importProgress: null });
   }
-  return { added, duplicate, failed };
+  return { added, duplicate, failed, books: imported };
 }
 
 /**
@@ -104,7 +109,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   /** Opens the native picker and imports the chosen files; returns a summary for the caller. */
   importBooks: async () => {
     const files = await api().pickFiles();
-    if (!files.length) return { added: 0, duplicate: 0, failed: [] };
+    if (!files.length) return { added: 0, duplicate: 0, failed: [], books: [] };
     return importPaths(files, set);
   },
 
@@ -113,7 +118,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     const files = Array.from(fileList)
       .filter((f) => isBookFileName(f.name))
       .map((f) => ({ path: api().getPathForFile(f), name: f.name, size: f.size }));
-    if (!files.length) return { added: 0, duplicate: 0, failed: [] };
+    if (!files.length) return { added: 0, duplicate: 0, failed: [], books: [] };
+    return importPaths(files, set);
+  },
+
+  /** Imports files main already authorized (books macOS opened with the app). */
+  importFiles: async (files) => {
+    if (!files.length) return { added: 0, duplicate: 0, failed: [], books: [] };
     return importPaths(files, set);
   },
 

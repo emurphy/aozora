@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { altKeyLabel, ctrlKeyLabel } from "@/lib/platform";
 
 /**
  * Persisted renderer prefs for the hover dictionary; dictionaries and the lookup
@@ -11,8 +12,8 @@ export type LookupModifier = "shift" | "alt" | "ctrl" | "none";
 
 export const LOOKUP_MODIFIERS: { value: LookupModifier; label: string }[] = [
   { value: "shift", label: "Hold Shift" },
-  { value: "alt", label: "Hold Alt" },
-  { value: "ctrl", label: "Hold Ctrl" },
+  { value: "alt", label: `Hold ${altKeyLabel()}` },
+  { value: "ctrl", label: `Hold ${ctrlKeyLabel()}` },
   { value: "none", label: "Hover only" },
 ];
 

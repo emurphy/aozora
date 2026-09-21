@@ -1,5 +1,5 @@
-import { ipcRenderer, webUtils } from "electron";
-import type { AddBookPayload, UpdateBookPayload, ProgressUpdate, AddBookmarkPayload, AddAnnotationPayload, UpdateAnnotationPayload } from "@/lib/types";
+import { ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
+import type { PickedFile, AddBookPayload, UpdateBookPayload, ProgressUpdate, AddBookmarkPayload, AddAnnotationPayload, UpdateAnnotationPayload } from "@/lib/types";
 
 /**
  * Library API exposed to the renderer as `window.electronAPI.library`.
@@ -9,6 +9,18 @@ import type { AddBookPayload, UpdateBookPayload, ProgressUpdate, AddBookmarkPayl
 export const libraryApi = {
   /** Opens the native picker. Resolves to [{ path, name, size }]. */
   pickFiles: () => ipcRenderer.invoke("library:pick-files"),
+
+  /**
+   * Subscribe to books macOS opened with the app (Finder double-click / Open
+   * With). Subscribing tells main the renderer is listening, which releases any
+   * files queued during launch. Returns an unsubscribe function.
+   */
+  onOpenFiles: (callback: (files: PickedFile[]) => void) => {
+    const listener = (_event: IpcRendererEvent, files: PickedFile[]) => callback(files);
+    ipcRenderer.on("library:open-files", listener);
+    ipcRenderer.send("library:open-files-ready");
+    return () => ipcRenderer.removeListener("library:open-files", listener);
+  },
 
   /**
    * Resolves the absolute path of a dropped File. Electron 32+ removed
