@@ -3,7 +3,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { applyReaderVars, fixedLayoutStyles } from "./reader-styles";
 import { buildSpreads, type Spread, type SpreadPage } from "@/lib/reader/spreads";
 import { ordinalAtCenter, visibleRange, type StripBox } from "@/lib/reader/strip";
-import { createWheelPager } from "@/lib/reader/wheel-pager";
+import { createWheelPager, dominantDelta } from "@/lib/reader/wheel-pager";
 import { isScrubFocused } from "./reader-progress";
 import { useFxlZoom } from "./hooks/use-fxl-zoom";
 import { useStripPan } from "./hooks/use-strip-pan";
@@ -671,7 +671,7 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
         e.preventDefault();
         return;
       }
-      const dir = wheelPagerRef.current(e.deltaY || e.deltaX, e.timeStamp);
+      const dir = wheelPagerRef.current(dominantDelta(e), e.timeStamp);
       if (dir) flip(dir);
     };
     host.addEventListener("wheel", onWheel, { passive: false });

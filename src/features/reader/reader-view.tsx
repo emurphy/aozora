@@ -27,7 +27,7 @@ import { getCachedBook, putCachedBook } from "@/lib/reader-cache";
 import { charAtViewEnd, collectAnchors, currentCharAtCenter, scrollToChar, scrollToElementId, type Anchor } from "@/lib/reader/position";
 import { PaginatedController, type PaginatedState } from "@/lib/reader/paginated";
 import { mergeSpreadSections } from "@/lib/reader/merge-spreads";
-import { createWheelPager } from "@/lib/reader/wheel-pager";
+import { createWheelPager, dominantDelta } from "@/lib/reader/wheel-pager";
 import { FixedLayoutView, type FixedLayoutHandle } from "./fixed-layout-view";
 import { clearSearchHighlight } from "@/lib/reader/highlight";
 import { chapterIndexAt } from "@/lib/reader/chapters";
@@ -669,7 +669,7 @@ export function ReaderView() {
   // paginated flips one page per wheel gesture (a notch, or a whole trackpad swipe).
   const handleWheel = (e: React.WheelEvent) => {
     if (modeRef.current === "paginated") {
-      const flip = wheelPagerRef.current(e.deltaY || e.deltaX, e.timeStamp);
+      const flip = wheelPagerRef.current(dominantDelta(e), e.timeStamp);
       if (flip > 0) flipNext();
       else if (flip < 0) flipPrev();
       return;

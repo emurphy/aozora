@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createWheelPager } from "@/lib/reader/wheel-pager";
+import { createWheelPager, dominantDelta } from "@/lib/reader/wheel-pager";
+import fixture from "./fixtures/macos-trackpad-swipes.json";
 
 /** Feeds [delta, t] pairs and returns the non-zero flips. */
 const run = (events: [number, number][]) => {
@@ -46,5 +47,41 @@ describe("createWheelPager", () => {
 
   it("ignores zero deltas", () => {
     expect(run([[0, 0], [0, 500]])).toEqual([]);
+  });
+
+  it("does not let a lone 1 px blip start a flip the wrong way", () => {
+    // Fingers landing: +1, then the real swipe the other way.
+    expect(run([[1, 0], [-2, 46], [-7, 83], [-16, 100]])).toEqual([-1]);
+  });
+
+  it("confirms a gentle swipe of tiny deltas on its second event", () => {
+    expect(run([[-1, 0], [-1, 17], [-2, 37], [-2, 53]])).toEqual([-1]);
+  });
+
+  it("does not mistake a momentum event that absorbed a dropped frame for a wheel notch", () => {
+    // Momentum decaying every 16 ms from -80, then (past the 250 ms floor) a
+    // -113 that arrives after 28 ms: two frames' worth in one event.
+    const events: [number, number][] = Array.from({ length: 20 }, (_, i): [number, number] => [-Math.round(80 * 0.97 ** i), i * 16]);
+    const last = events.at(-1)!;
+    events.push([-113, last[1] + 28], [-50, last[1] + 44], [-47, last[1] + 60]);
+    expect(run(events)).toEqual([-1]);
+  });
+});
+
+describe("dominantDelta", () => {
+  it("reads the larger axis so vertical jitter can't flip a sideways swipe", () => {
+    expect(dominantDelta({ deltaX: -40, deltaY: 1 })).toBe(-40);
+    expect(dominantDelta({ deltaX: 2, deltaY: -30 })).toBe(-30);
+  });
+});
+
+describe("recorded macOS trackpad swipes", () => {
+  // Events are [deltaX, deltaY, ms since the burst began].
+  const { bursts } = fixture;
+
+  it.each(bursts.map((b, i) => [i, b] as const))("burst %i flips once per physical swipe, all forward", (_i, burst) => {
+    const feed = createWheelPager();
+    const flips = burst.events.map(([dx, dy, t]) => feed(dominantDelta({ deltaX: dx, deltaY: dy }), t)).filter((f) => f !== 0);
+    expect(flips).toEqual(Array(burst.swipes).fill(-1));
   });
 });
