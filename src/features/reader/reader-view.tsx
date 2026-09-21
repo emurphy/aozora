@@ -15,6 +15,7 @@ import { AnnotationPopover } from "./annotation-popover";
 import { AnnotationTrigger } from "./annotation-trigger";
 import { ReaderSearch } from "./reader-search";
 import { ReaderProgress, isScrubFocused } from "./reader-progress";
+import { JumpBackChip } from "./jump-back-chip";
 import { ReaderGallery } from "./reader-gallery";
 import { collectIllustrations, type Illustration } from "@/lib/reader/illustrations";
 import { applyReaderVars, continuousStyles, paginatedStyles } from "./reader-styles";
@@ -43,6 +44,7 @@ import { useBookmarks } from "./hooks/use-bookmarks";
 import { useReaderSearch } from "./hooks/use-reader-search";
 import { useDiscordPresence } from "./hooks/use-discord-presence";
 import { useAnnotations } from "./hooks/use-annotations";
+import { useJumpBack } from "./hooks/use-jump-back";
 
 const api = () => window.electronAPI.library;
 
@@ -319,9 +321,18 @@ export function ReaderView() {
     [book, applyProgress, markSession],
   );
 
+  // Every jump below records where it started, so one click gets back there.
+  const { backChar, markJump, popOrigin, dismiss: dismissJumpBack } = useJumpBack({
+    char: currentChar,
+    charRef,
+    fixedLayout,
+    resetToken: parseToken,
+  });
+
   // Jumps to a character offset, in whichever mode is active.
   const jumpToChar = useCallback(
     (char: number) => {
+      markJump();
       setBookmarksOpen(false);
       charRef.current = char;
       if (modeRef.current === "fixed") {
@@ -337,8 +348,14 @@ export function ReaderView() {
       scrollToChar(host, anchorsRef.current.anchors, verticalRef.current, char);
       requestAnimationFrame(commitContinuousChar);
     },
-    [commitContinuousChar],
+    [commitContinuousChar, markJump],
   );
+
+  /** Takes the offer: returns to the position the last jump left behind. */
+  const handleJumpBack = useCallback(() => {
+    const target = popOrigin();
+    if (target != null) jumpToChar(target);
+  }, [popOrigin, jumpToChar]);
 
   // A seek lands far from what's on screen, so every anchored overlay is stale.
   const seekToChar = useCallback(
@@ -678,6 +695,7 @@ export function ReaderView() {
   };
 
   const handleJump = (reference: string) => {
+    markJump();
     setTocOpen(false);
     if (modeRef.current === "fixed") {
       fixedRef.current?.jumpToId(reference);
@@ -712,6 +730,7 @@ export function ReaderView() {
         setFootnote({ html: note, anchor: anchor.getBoundingClientRect() });
         return;
       }
+      markJump(); // a link that lands nearby is dropped once the position reports back
       if (modeRef.current === "paginated") {
         if (id && controllerRef.current?.jumpToSectionId(id)) e.preventDefault();
       } else if (id && jumpToReference(id)) {
@@ -723,6 +742,18 @@ export function ReaderView() {
     // Not a link: the highlights hook opens the editor if the click landed on one.
     openHighlightAtPoint(e);
   };
+
+  // Alt+Left takes the back offer from the keyboard (the page-flip keys ignore Alt).
+  useEffect(() => {
+    if (backChar == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" || !e.altKey) return;
+      e.preventDefault();
+      handleJumpBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [backChar, handleJumpBack]);
 
   // A content rebuild or mode switch invalidates the open note's anchor box.
   useEffect(() => {
@@ -876,6 +907,17 @@ export function ReaderView() {
           onDelete={annoPopover?.id ? () => handleRemoveAnnotation(annoPopover.id!) : undefined}
           onClose={closeAnnoPopover}
         />
+        {backChar != null && (
+          <JumpBackChip
+            char={backChar}
+            total={total}
+            fixedLayout={fixedLayout}
+            label={chapters[chapterIndexAt(chapters, backChar)]?.label || ""}
+            raised={progressBar === "auto"}
+            onBack={handleJumpBack}
+            onDismiss={dismissJumpBack}
+          />
+        )}
       </div>
 
       <ReaderProgress

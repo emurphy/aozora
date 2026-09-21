@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookPlus, FolderPlus, Heart, Library, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { BookPlus, FolderPlus, Library, ListTodo, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -74,7 +74,7 @@ function ShelfTile({
         <CoverFan books={shelf.books} />
         {shelf.builtIn && (
           <span className="pointer-events-none absolute left-2 top-2 flex size-5 items-center justify-center bg-black/40 text-white backdrop-blur-xs">
-            <Heart className="size-3" />
+            <ListTodo className="size-3" />
           </span>
         )}
       </button>

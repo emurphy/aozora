@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Heart, Plus, Search } from "lucide-react";
+import { Check, ListTodo, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import {
@@ -219,7 +219,7 @@ export function BookCollectionsDialog({ book, open, onOpenChange }: { book: Book
         <div className="max-h-64 overflow-y-auto border">
           <ShelfRow
             label={FAVORITES_COLLECTION_NAME}
-            icon={Heart}
+            icon={ListTodo}
             count={favoriteCount}
             checked={book.favorite}
             onToggle={() => toggleFavorite(book.id).catch(() => toast.error(`Failed to update ${FAVORITES_COLLECTION_NAME}`))}

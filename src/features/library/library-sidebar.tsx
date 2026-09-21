@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, BookA, BookOpen, CheckCircle2, Circle, Heart, Languages, Library, LibraryBig, Plus, Settings } from "lucide-react";
+import { BarChart3, BookA, BookOpen, CheckCircle2, Circle, Languages, Library, LibraryBig, ListTodo, Plus, Settings } from "lucide-react";
 import { cn } from "cn";
 import { readingStatus } from "@/lib/format";
 import { useCollectionsStore } from "@/stores/collections-store";
@@ -133,7 +133,7 @@ export function LibrarySidebar() {
 
         <nav className="max-h-44 space-y-0.5 overflow-y-auto [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:transition-colors hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
           <NavItem
-            icon={Heart}
+            icon={ListTodo}
             label={FAVORITES_COLLECTION_NAME}
             count={counts.favorites}
             active={inLibrary && collectionFilter === FAVORITES_COLLECTION_ID}

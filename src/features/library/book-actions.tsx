@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, FolderMinus, Heart, HeartOff, LibraryBig, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Check, FolderMinus, LibraryBig, ListMinus, ListPlus, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -86,8 +86,8 @@ function useBookActions(book: Book): BookActionsState {
   const items = [
     { key: "edit", label: "Edit details", icon: Pencil, onSelect: () => setEditOpen(true) },
     book.favorite
-      ? { key: "favorite", label: `Remove from ${FAVORITES_COLLECTION_NAME}`, icon: HeartOff, onSelect: handleToggleFavorite }
-      : { key: "favorite", label: `Add to ${FAVORITES_COLLECTION_NAME}`, icon: Heart, onSelect: handleToggleFavorite },
+      ? { key: "favorite", label: `Remove from ${FAVORITES_COLLECTION_NAME}`, icon: ListMinus, onSelect: handleToggleFavorite }
+      : { key: "favorite", label: `Add to ${FAVORITES_COLLECTION_NAME}`, icon: ListPlus, onSelect: handleToggleFavorite },
     { key: "collections", label: "Collections…", icon: LibraryBig, onSelect: () => setCollectionsOpen(true) },
     openCollection && {
       key: "uncollect",
