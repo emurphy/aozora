@@ -17,9 +17,11 @@
  *     (twice the delta after twice the wait) doesn't pass for a notch.
  * Everything else is the tail of the current gesture and is swallowed.
  *
- * A start smaller than `confirmDelta` only arms a flip, which fires on the next
- * event in the same direction: fingers landing on a trackpad can emit a lone
- * 1 px blip the wrong way, which must not flip the page backwards.
+ * A start only arms a flip, which fires once the gesture has travelled
+ * `minTravel` px in one direction: a finger brushing or resting on the trackpad
+ * emits one or two 1 px events, sometimes the wrong way, and those must not
+ * turn the page. A real swipe gets there within its first few events; a mouse
+ * notch in its first.
  */
 
 /**
@@ -41,12 +43,12 @@ export interface WheelPagerOptions {
   minIntervalMs?: number;
   /** |delta| at/above which a non-decaying event reads as a mouse-wheel notch. */
   notchDelta?: number;
-  /** |delta| below which a gesture start waits for a same-direction event to confirm it. */
-  confirmDelta?: number;
+  /** Travel (px, summed in one direction) a gesture needs before it may flip. */
+  minTravel?: number;
 }
 
 /** Returns a feed function: pass each event's delta and timestamp; it returns the flip direction (±1) or 0. */
-export function createWheelPager({ idleMs = 150, minIntervalMs = 250, notchDelta = 50, confirmDelta = 3 }: WheelPagerOptions = {}) {
+export function createWheelPager({ idleMs = 150, minIntervalMs = 250, notchDelta = 50, minTravel = 4 }: WheelPagerOptions = {}) {
   let lastEventAt = -Infinity;
   let lastFlipAt = -Infinity;
   let prevRate = 0;
@@ -54,8 +56,9 @@ export function createWheelPager({ idleMs = 150, minIntervalMs = 250, notchDelta
   // fallen well below its peak and then climbs again is a new swipe.
   let peak = 0;
   let trough = 0;
-  // Direction of a tentative (tiny) gesture start awaiting confirmation.
+  // A gesture start awaiting enough travel: its direction and the px so far.
   let armed: -1 | 0 | 1 = 0;
+  let travel = 0;
 
   return (delta: number, now: number): -1 | 0 | 1 => {
     if (!delta) return 0;
@@ -78,18 +81,19 @@ export function createWheelPager({ idleMs = 150, minIntervalMs = 250, notchDelta
       trough = Math.min(trough, mag);
     }
 
-    let fire = false;
-    if (idle || risesFromTail || notch) {
-      if (mag >= confirmDelta) fire = true;
-      else armed = dir;
+    if (idle || risesFromTail || notch || (armed && dir !== armed)) {
+      // A new start (or a reversal of one still arming) begins counting afresh.
+      armed = dir;
+      travel = mag;
     } else if (armed) {
-      // Confirmed by a second event the same way; a reversal re-arms instead.
-      if (dir === armed) fire = true;
-      else armed = dir;
+      travel += mag;
     }
 
-    if (!fire || now - lastFlipAt < minIntervalMs) return 0;
+    if (!armed || travel < minTravel) return 0;
+    // Ready, but too soon after the last flip: drop it rather than let it fire
+    // later from the middle of this gesture's momentum.
     armed = 0;
+    if (now - lastFlipAt < minIntervalMs) return 0;
     lastFlipAt = now;
     return dir;
   };

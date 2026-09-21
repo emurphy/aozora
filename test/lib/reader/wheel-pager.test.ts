@@ -54,8 +54,17 @@ describe("createWheelPager", () => {
     expect(run([[1, 0], [-2, 46], [-7, 83], [-16, 100]])).toEqual([-1]);
   });
 
-  it("confirms a gentle swipe of tiny deltas on its second event", () => {
+  it("turns the page for a gentle swipe of 1-2 px deltas once it has travelled far enough", () => {
     expect(run([[-1, 0], [-1, 17], [-2, 37], [-2, 53]])).toEqual([-1]);
+  });
+
+  it("ignores a finger brushing the trackpad (a couple of 1 px events)", () => {
+    expect(run([[1, 0], [1, 17]])).toEqual([]);
+    expect(run([[-1, 0], [-1, 20], [5, 1000], [9, 1016]])).toEqual([1]);
+  });
+
+  it("lets a single large wheel notch flip at once", () => {
+    expect(run([[100, 0]])).toEqual([1]);
   });
 
   it("does not mistake a momentum event that absorbed a dropped frame for a wheel notch", () => {
@@ -79,9 +88,9 @@ describe("recorded macOS trackpad swipes", () => {
   // Events are [deltaX, deltaY, ms since the burst began].
   const { bursts } = fixture;
 
-  it.each(bursts.map((b, i) => [i, b] as const))("burst %i flips once per physical swipe, all forward", (_i, burst) => {
+  it.each(bursts.map((b, i) => [i, b] as const))("burst %i turns one page per physical swipe, in its direction", (_i, burst) => {
     const feed = createWheelPager();
     const flips = burst.events.map(([dx, dy, t]) => feed(dominantDelta({ deltaX: dx, deltaY: dy }), t)).filter((f) => f !== 0);
-    expect(flips).toEqual(Array(burst.swipes).fill(-1));
+    expect(flips).toEqual(burst.flips);
   });
 });
