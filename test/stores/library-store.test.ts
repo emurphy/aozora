@@ -56,7 +56,7 @@ describe("importBooks (native picker)", () => {
   it("returns an empty summary when the picker is cancelled", async () => {
     api.pickFiles.mockResolvedValueOnce([]);
     const res = await useLibraryStore.getState().importBooks();
-    expect(res).toEqual({ added: 0, duplicate: 0, failed: [] });
+    expect(res).toEqual({ added: 0, duplicate: 0, failed: [], books: [] });
     expect(api.addBook).not.toHaveBeenCalled();
   });
 
@@ -68,7 +68,8 @@ describe("importBooks (native picker)", () => {
     api.list.mockResolvedValueOnce([{ id: "x" }, { id: "y" }]);
     const res = await useLibraryStore.getState().importBooks();
     expect(api.addBook).toHaveBeenCalledTimes(2);
-    expect(res).toEqual({ added: 2, duplicate: 0, failed: [] });
+    expect(res).toMatchObject({ added: 2, duplicate: 0, failed: [] });
+    expect(res.books).toHaveLength(2);
     expect(useLibraryStore.getState().books).toHaveLength(2);
     expect(useLibraryStore.getState().importing).toBe(false);
   });
@@ -80,7 +81,9 @@ describe("importBooks (native picker)", () => {
     ]);
     api.addBook.mockResolvedValueOnce({ book: { id: "existing" }, duplicate: true });
     const res = await useLibraryStore.getState().importBooks();
-    expect(res).toEqual({ added: 1, duplicate: 1, failed: [] });
+    expect(res).toMatchObject({ added: 1, duplicate: 1, failed: [] });
+    // The duplicate still comes back as its existing record, so a caller can open it.
+    expect(res.books.map((b) => b.id)).toContain("existing");
   });
 
   it("records a failed file when extraction throws and keeps importing the rest", async () => {
@@ -95,6 +98,20 @@ describe("importBooks (native picker)", () => {
     expect(res.added).toBe(1);
     expect(res.failed).toEqual(["bad.epub"]);
     expect(api.addBook).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("importFiles (opened from Finder)", () => {
+  it("imports already-authorized files without the picker and returns their records", async () => {
+    const res = await useLibraryStore.getState().importFiles([{ path: "/Books/a.epub", name: "a.epub", size: 1 }]);
+    expect(api.pickFiles).not.toHaveBeenCalled();
+    expect(api.addBook).toHaveBeenCalledTimes(1);
+    expect(res.added).toBe(1);
+    expect(res.books).toHaveLength(1);
+  });
+
+  it("returns an empty summary for no files", async () => {
+    expect(await useLibraryStore.getState().importFiles([])).toEqual({ added: 0, duplicate: 0, failed: [], books: [] });
   });
 });
 
@@ -116,7 +133,7 @@ describe("importDroppedFiles", () => {
 
   it("returns an empty summary when nothing is a book file", async () => {
     const res = await useLibraryStore.getState().importDroppedFiles([{ name: "a.pdf", size: 1 }] as unknown as FileList);
-    expect(res).toEqual({ added: 0, duplicate: 0, failed: [] });
+    expect(res).toEqual({ added: 0, duplicate: 0, failed: [], books: [] });
     expect(api.addBook).not.toHaveBeenCalled();
   });
 });

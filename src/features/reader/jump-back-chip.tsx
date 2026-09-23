@@ -1,5 +1,6 @@
 import { CornerUpLeft, X } from "lucide-react";
 import { cn } from "cn";
+import { altKeyLabel } from "@/lib/platform";
 
 interface Props {
   /** The recorded position: a character offset, or a page ordinal for manga. */
@@ -30,7 +31,7 @@ export function JumpBackChip({ char, total, fixedLayout, label, raised, onBack, 
       <button
         type="button"
         onClick={onBack}
-        title="Return to where you jumped from (Alt+Left)"
+        title={`Return to where you jumped from (${altKeyLabel()}+Left)`}
         className="flex cursor-pointer items-center gap-1.5 px-1.5 py-1 hover:bg-accent hover:text-accent-foreground"
       >
         <CornerUpLeft className="size-3.5 shrink-0" />

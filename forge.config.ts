@@ -1,4 +1,7 @@
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
@@ -15,8 +18,51 @@ const config: ForgeConfig = {
       return true;
     },
     appCopyright: "Copyright © 2026 Meoki",
+    // macOS bundle identity. Aozora registers as an *alternate* opener (it never
+    // claims the default) for the formats it reads, so Finder's Open With and a
+    // Dock drop reach `open-file` (src/main/open-files.ts).
+    appBundleId: "vn.meoki.aozora",
+    appCategoryType: "public.app-category.education",
+    extendInfo: {
+      CFBundleDocumentTypes: [
+        {
+          CFBundleTypeName: "EPUB Book",
+          CFBundleTypeRole: "Viewer",
+          LSHandlerRank: "Alternate",
+          LSItemContentTypes: ["org.idpf.epub-container"],
+          CFBundleTypeExtensions: ["epub"],
+        },
+        {
+          CFBundleTypeName: "Comic Book Archive",
+          CFBundleTypeRole: "Viewer",
+          LSHandlerRank: "Alternate",
+          CFBundleTypeExtensions: ["cbz"],
+        },
+        {
+          CFBundleTypeName: "Aozora Bunko Text",
+          CFBundleTypeRole: "Viewer",
+          LSHandlerRank: "Alternate",
+          LSItemContentTypes: ["public.plain-text"],
+          CFBundleTypeExtensions: ["txt"],
+        },
+      ],
+    },
   },
   rebuildConfig: {},
+  hooks: {
+    // Unsigned local macOS builds: packaging edits Info.plist after Electron's
+    // own ad-hoc signature, leaving a broken seal (`codesign --verify` fails,
+    // Keychain access is refused). Re-sign the finished bundle ad hoc. A real
+    // Developer ID setup (packagerConfig.osxSign) would replace this.
+    postPackage: async (_config, { platform, outputPaths }) => {
+      if (platform !== "darwin") return;
+      for (const dir of outputPaths) {
+        for (const bundle of fs.readdirSync(dir).filter((f) => f.endsWith(".app"))) {
+          execFileSync("codesign", ["--force", "--deep", "--sign", "-", path.join(dir, bundle)], { stdio: "inherit" });
+        }
+      }
+    },
+  },
   makers: [
     {
       name: "@electron-forge/maker-squirrel",

@@ -3,6 +3,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { applyReaderVars, fixedLayoutStyles } from "./reader-styles";
 import { buildSpreads, type Spread, type SpreadPage } from "@/lib/reader/spreads";
 import { ordinalAtCenter, visibleRange, type StripBox } from "@/lib/reader/strip";
+import { createWheelPager, dominantDelta } from "@/lib/reader/wheel-pager";
 import { isScrubFocused } from "./reader-progress";
 import { useFxlZoom } from "./hooks/use-fxl-zoom";
 import { useStripPan } from "./hooks/use-strip-pan";
@@ -649,10 +650,10 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
   // Wheel handling (native listener so Ctrl+wheel zoom can preventDefault; Electron
   // would otherwise page-zoom). Paginated: zoom/pan takes the wheel first (Ctrl/⌘ or
   // pinch → zoom at cursor; plain wheel pans when zoomed), otherwise it flips
-  // (debounced). Continuous: the vertical strip scrolls natively; the horizontal
+  // once per gesture (see lib/reader/wheel-pager). Continuous: the vertical strip scrolls natively; the horizontal
   // filmstrip maps the vertical wheel onto its axis (wheel-down advances, i.e.
   // leftward in RTL) since most wheels/trackpads only emit deltaY.
-  const wheelTsRef = useRef(0);
+  const wheelPagerRef = useRef(createWheelPager());
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -670,12 +671,8 @@ export const FixedLayoutView = forwardRef<FixedLayoutHandle, FixedLayoutViewProp
         e.preventDefault();
         return;
       }
-      const delta = e.deltaY || e.deltaX;
-      if (!delta) return;
-      const now = e.timeStamp;
-      if (now - wheelTsRef.current < 250) return;
-      wheelTsRef.current = now;
-      flip(delta > 0 ? 1 : -1);
+      const dir = wheelPagerRef.current(dominantDelta(e), e.timeStamp);
+      if (dir) flip(dir);
     };
     host.addEventListener("wheel", onWheel, { passive: false });
     return () => host.removeEventListener("wheel", onWheel);

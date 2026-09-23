@@ -12,20 +12,30 @@ import { registerBackupIpc } from "./main/backup.js";
 import { registerDiscordIpc } from "./main/discord.js";
 import { registerAnkiIpc } from "./main/anki.js";
 import { registerVoicevoxIpc } from "./main/voicevox.js";
+import { buildMacMenu } from "./main/menu.js";
+import { registerOpenFiles } from "./main/open-files.js";
+
+const isMac = process.platform === "darwin";
 
 // Quit early during Squirrel.Windows install/uninstall (shortcut creation/removal).
 if (started) {
   app.quit();
 }
-updateElectronApp();
+// The update feed only carries the Squirrel.Windows build; on macOS the updater
+// would also need a signed app, so there it only ever logs errors.
+if (process.platform === "win32") updateElectronApp();
 
-Menu.setApplicationMenu(null);
+// Windows/Linux draw their own title bar and run menu-less; macOS keeps a real
+// menu bar, which also carries the standard edit/quit/fullscreen shortcuts.
+Menu.setApplicationMenu(isMac ? buildMacMenu() : null);
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 1600,
     height: 900,
-    frame: false,
+    // macOS keeps the native traffic lights inset into the custom title bar
+    // (which then drops its own window buttons); elsewhere it's fully frameless.
+    ...(isMac ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 12, y: 9 } } : { frame: false }),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -71,6 +81,9 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 };
+
+// Before `ready`: a double-clicked book delivers `open-file` during launch.
+registerOpenFiles(createWindow);
 
 // Register IPC handlers before the first window can invoke them.
 app.whenReady().then(() => {

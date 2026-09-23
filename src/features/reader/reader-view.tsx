@@ -27,6 +27,7 @@ import { getCachedBook, putCachedBook } from "@/lib/reader-cache";
 import { charAtViewEnd, collectAnchors, currentCharAtCenter, scrollToChar, scrollToElementId, type Anchor } from "@/lib/reader/position";
 import { PaginatedController, type PaginatedState } from "@/lib/reader/paginated";
 import { mergeSpreadSections } from "@/lib/reader/merge-spreads";
+import { createWheelPager, dominantDelta } from "@/lib/reader/wheel-pager";
 import { FixedLayoutView, type FixedLayoutHandle } from "./fixed-layout-view";
 import { clearSearchHighlight } from "@/lib/reader/highlight";
 import { chapterIndexAt } from "@/lib/reader/chapters";
@@ -124,7 +125,7 @@ export function ReaderView() {
   const charEndRef = useRef(0);
   const rafRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const wheelTsRef = useRef(0);
+  const wheelPagerRef = useRef(createWheelPager());
   const readyRef = useRef(false);
   const footnotesRef = useRef<Map<string, string>>(new Map()); // id → note inner HTML
 
@@ -665,22 +666,21 @@ export function ReaderView() {
   };
 
   // Wheel: continuous maps vertical wheel onto the horizontal axis for tategaki;
-  // paginated flips one page per (throttled) wheel notch.
+  // paginated flips one page per wheel gesture (a notch, or a whole trackpad swipe).
   const handleWheel = (e: React.WheelEvent) => {
     if (modeRef.current === "paginated") {
-      const delta = e.deltaY || e.deltaX;
-      if (!delta) return;
-      const now = Date.now();
-      if (now - wheelTsRef.current < 250) return;
-      wheelTsRef.current = now;
-      if (delta > 0) flipNext();
-      else flipPrev();
+      const flip = wheelPagerRef.current(dominantDelta(e), e.timeStamp);
+      if (flip > 0) flipNext();
+      else if (flip < 0) flipPrev();
       return;
     }
     if (!verticalRef.current) return; // horizontal books scroll natively
     const host = hostRef.current;
     if (!host || host.scrollWidth <= host.clientWidth) return;
-    if (e.deltaY !== 0) host.scrollLeft -= e.deltaY;
+    // Only a mostly-vertical wheel is remapped: a trackpad's sideways swipe
+    // already scrolls the strip natively, and remapping its deltaY too would
+    // double up diagonal swipes.
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) host.scrollLeft -= e.deltaY;
   };
 
   const jumpToReference = (reference: string) => {

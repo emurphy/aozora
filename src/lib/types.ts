@@ -75,6 +75,9 @@ export const FAVORITES_COLLECTION_ID = "favorites";
 /** What that shelf is called in the UI. */
 export const FAVORITES_COLLECTION_NAME = "Backlog";
 
+/** Application-menu items the main process forwards to the renderer (macOS menu bar). */
+export type MenuCommand = "open-books" | "settings";
+
 /** A file chosen via the native picker. */
 export interface PickedFile {
   path: string;

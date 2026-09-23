@@ -9,7 +9,9 @@ import { StatsView } from "@/features/stats/stats-view";
 import { WordsView } from "@/features/words/words-view";
 import { DictionariesView } from "@/features/dictionaries/dictionaries-view";
 import { SettingsView } from "@/features/settings/settings-view";
+import { importAndOpen } from "@/features/library/import-and-open";
 import { useReaderStore } from "@/stores/reader-store";
+import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useSettingsStore, THEMES } from "@/stores/settings-store";
 import { useFontsStore } from "@/stores/fonts-store";
@@ -32,6 +34,29 @@ export function App() {
     const setFullscreen = useUiStore.getState().setFullscreen;
     api.isFullscreen().then(setFullscreen);
     return api.onFullscreenChanged(setFullscreen);
+  }, []);
+
+  // macOS menu bar: File → Open… imports through the same picker as the library's
+  // Import button; Settings… (⌘,) jumps to settings. Settings leaves the reader
+  // first, since the page doesn't show over it.
+  useEffect(() => {
+    const api = window.electronAPI?.window;
+    if (!api) return;
+    return api.onMenuCommand((command) => {
+      if (command === "settings") {
+        useReaderStore.getState().close();
+        useUiStore.getState().setView("settings");
+      } else {
+        void importAndOpen(() => useLibraryStore.getState().importBooks());
+      }
+    });
+  }, []);
+
+  // Books macOS opened with the app (Finder double-click / Open With / Dock drop).
+  useEffect(() => {
+    const api = window.electronAPI?.library;
+    if (!api) return;
+    return api.onOpenFiles((files) => void importAndOpen(() => useLibraryStore.getState().importFiles(files)));
   }, []);
 
   // The sidebar shows collections on every page, so mirror them once here rather
