@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { TitleBar } from "@/components/title-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -10,37 +9,15 @@ import { StatsView } from "@/features/stats/stats-view";
 import { WordsView } from "@/features/words/words-view";
 import { DictionariesView } from "@/features/dictionaries/dictionaries-view";
 import { SettingsView } from "@/features/settings/settings-view";
-import { reportImport } from "@/features/library/import-report";
+import { importAndOpen } from "@/features/library/import-and-open";
 import { useReaderStore } from "@/stores/reader-store";
-import { useLibraryStore, type ImportSummary } from "@/stores/library-store";
+import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useSettingsStore, THEMES } from "@/stores/settings-store";
 import { useFontsStore } from "@/stores/fonts-store";
 import { useDictionaryImportStore } from "@/stores/dictionary-import-store";
 import { useCollectionsStore } from "@/stores/collections-store";
 import { syncDictionaryStyles } from "@/lib/dictionary/dict-styles";
-
-/**
- * Runs an import from outside the library page (File → Open…, Finder). A single
- * book opens in the reader (a duplicate opens its existing copy); several land
- * the user on the library. Navigation waits for the result, so cancelling the
- * picker leaves whatever was open alone.
- */
-async function importAndOpen(run: () => Promise<ImportSummary>): Promise<void> {
-  if (useLibraryStore.getState().importing) return;
-  try {
-    const summary = await run();
-    reportImport(summary);
-    if (summary.books.length === 1) {
-      useReaderStore.getState().open(summary.books[0]);
-    } else if (summary.books.length > 1) {
-      useReaderStore.getState().close();
-      useUiStore.getState().setView("library");
-    }
-  } catch {
-    toast.error("Import failed");
-  }
-}
 
 export function App() {
   const reading = useReaderStore((s) => s.currentBook !== null);
