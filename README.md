@@ -222,9 +222,23 @@ open out/Aozora-darwin-arm64/Aozora.app
 
 The local build is ad-hoc signed (not notarized), which is enough to run it on the Mac
 that built it. On first launch macOS asks for access to the "Aozora Safe Storage" keychain
-item (Electron's encryption key); choose **Always Allow**. Each rebuild changes the ad-hoc
-signature, so it asks again after a rebuild. A copy downloaded from elsewhere is
-quarantined by Gatekeeper; clear that with `xattr -dr com.apple.quarantine Aozora.app`.
+item (Electron's encryption key); choose **Always Allow**. An ad-hoc signature changes
+every build, so macOS treats each rebuild as a different app and asks again. Signing with
+a stable identity stops that:
+
+```bash
+./scripts/macos-dev-cert.sh                       # once: a self-signed "Aozora Local Dev"
+AOZORA_SIGN_IDENTITY="Aozora Local Dev" yarn package --platform=darwin --arch=arm64
+```
+
+Any identity from `security find-identity -v -p codesigning` works, including an Apple
+Development one. The certificate the script makes is self-signed and trusted only in your
+login keychain: enough to run builds on this Mac, not to distribute them. If the prompt
+keeps appearing after switching, delete the stale item once with
+`security delete-generic-password -s "Aozora Safe Storage"` (the app makes a new one).
+
+A copy downloaded from elsewhere is quarantined by Gatekeeper; clear that with
+`xattr -dr com.apple.quarantine Aozora.app`.
 
 On macOS the app uses the native menu bar (**File → Open…** ⌘O, **Settings…** ⌘,,
 **View → Enter Full Screen** ⌃⌘F) and the window's traffic lights. Books also open from

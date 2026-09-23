@@ -50,15 +50,22 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   hooks: {
-    // Unsigned local macOS builds: packaging edits Info.plist after Electron's
-    // own ad-hoc signature, leaving a broken seal (`codesign --verify` fails,
-    // Keychain access is refused). Re-sign the finished bundle ad hoc. A real
-    // Developer ID setup (packagerConfig.osxSign) would replace this.
+    // Local macOS builds: packaging edits Info.plist after Electron's own ad-hoc
+    // signature, leaving a broken seal (`codesign --verify` fails, Keychain
+    // access is refused). Re-sign the finished bundle.
+    //
+    // Ad hoc by default, which is enough to run locally but produces a different
+    // signature every build, so macOS re-asks for the app's Keychain item each
+    // time. Set AOZORA_SIGN_IDENTITY to a stable signing identity to stop that
+    // (`scripts/macos-dev-cert.sh` makes a self-signed one; any identity from
+    // `security find-identity -v -p codesigning` works). A release setup would
+    // use packagerConfig.osxSign/osxNotarize instead.
     postPackage: async (_config, { platform, outputPaths }) => {
       if (platform !== "darwin") return;
+      const identity = process.env.AOZORA_SIGN_IDENTITY || "-";
       for (const dir of outputPaths) {
         for (const bundle of fs.readdirSync(dir).filter((f) => f.endsWith(".app"))) {
-          execFileSync("codesign", ["--force", "--deep", "--sign", "-", path.join(dir, bundle)], { stdio: "inherit" });
+          execFileSync("codesign", ["--force", "--deep", "--sign", identity, path.join(dir, bundle)], { stdio: "inherit" });
         }
       }
     },
