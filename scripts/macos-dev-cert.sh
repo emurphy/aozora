@@ -35,7 +35,9 @@ openssl req -x509 -newkey rsa:2048 -keyout "$WORK/key.pem" -out "$WORK/cert.pem"
 openssl pkcs12 -export -out "$WORK/bundle.p12" -inkey "$WORK/key.pem" -in "$WORK/cert.pem" -name "$NAME" \
   -passout pass:aozora -macalg sha1 -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES
 
-security import "$WORK/bundle.p12" -k "$KEYCHAIN" -P aozora -A -T /usr/bin/codesign
+# -T codesign: only codesign may use the key. -x: it can never be exported.
+# No -A, which would hand the key to every application on the Mac.
+security import "$WORK/bundle.p12" -k "$KEYCHAIN" -P aozora -x -T /usr/bin/codesign
 # Self-signed: the certificate is its own root, so it has to be trusted to sign with.
 security add-trusted-cert -r trustRoot -p codeSign -k "$KEYCHAIN" "$WORK/cert.pem"
 
